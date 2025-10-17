@@ -1,0 +1,113 @@
+openapi: 3.0.3
+info:
+  title: Oxalio FNE API
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080/api/v1
+paths:
+  /auth/token:
+    post:
+      summary: OAuth2 client_credentials
+      responses:
+        "200":
+          description: Access token
+  /invoices:
+    post:
+      summary: Créer et soumettre une facture FNE
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InvoiceInput' }
+      responses:
+        "202": { description: Acceptée (pending) ou validée (sync) }
+        "400": { description: Schéma invalide }
+        "409": { description: Conflit idempotence }
+  /invoices/{id}:
+    get:
+      summary: Obtenir une facture
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Détails facture }
+  /invoices/{id}/status:
+    get:
+      summary: Statut FNE
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: PENDING|VALIDATED|REJECTED|CANCELLED }
+  /invoices/{id}/cancel:
+    post:
+      summary: Annuler une facture validée
+      responses:
+        "202": { description: Annulation transmise }
+  /webhooks/dgi-callback:
+    post:
+      summary: Callback DGI (mTLS côté serveur en prod)
+      responses:
+        "204": { description: OK }
+components:
+  schemas:
+    InvoiceInput:
+      type: object
+      required: [header, seller, buyer, lines]
+      properties:
+        header:
+          type: object
+          required: [invoiceNumber, issueDate, currency, invoiceType, paymentMode]
+          properties:
+            invoiceNumber: { type: string }
+            issueDate: { type: string, format: date-time }
+            currency: { type: string, example: XOF }
+            invoiceType: { type: string, example: SALE }
+            paymentMode: { type: string, example: TRANSFER }
+        seller:
+          type: object
+          required: [taxId, companyName]
+          properties:
+            taxId: { type: string, example: NIF_123456 }
+            companyName: { type: string }
+            address: { type: object, additionalProperties: true }
+        buyer:
+          type: object
+          required: [name]
+          properties:
+            taxId: { type: string, nullable: true }
+            name: { type: string }
+            address: { type: object, additionalProperties: true }
+        lines:
+          type: array
+          items:
+            type: object
+            required: [description, quantity, unitPrice, vatRate]
+            properties:
+              description: { type: string }
+              quantity: { type: number }
+              unitPrice: { type: number }
+              vatRate: { type: number }
+              vatAmount: { type: number }
+              discounts: { type: number, nullable: true }
+        totals:
+          type: object
+          properties:
+            subtotal: { type: number }
+            totalVat: { type: number }
+            totalAmount: { type: number }
+        fneMetadata:
+          type: object
+          properties:
+            qrCode: { type: string }
+            hash: { type: string }
+            signature: { type: string }

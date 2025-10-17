@@ -1,0 +1,9 @@
+spring:
+  config:
+    activate:
+      on-profile: sandbox
+
+dgi:
+  endpoint: https://sandbox.dgi.gov.ci/api/fne/invoices
+  auth-token: DGI_SANDBOX_TOKEN
+  timeout-ms: 10000

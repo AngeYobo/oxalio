@@ -1,0 +1,73 @@
+version: "3.9"
+
+services:
+  # ======================================================
+  # 🧩 Oxalio API Gateway — Front Door de toute la plateforme
+  # ======================================================
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: oxalio-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+    depends_on:
+      - auth-service
+      - invoice-service
+      - integration-service
+    networks:
+      - oxalio-net
+
+  # ======================================================
+  # 🔐 Auth Service — Gestion des comptes, tokens, etc.
+  # ======================================================
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: oxalio-auth
+    expose:
+      - "8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+    networks:
+      - oxalio-net
+
+  # ======================================================
+  # 🧾 Invoice Service — Module FNE / DGI (facturation)
+  # ======================================================
+  invoice-service:
+    build:
+      context: ./invoice-service
+      dockerfile: Dockerfile
+    container_name: oxalio-invoice
+    expose:
+      - "8082"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+    networks:
+      - oxalio-net
+
+  # ======================================================
+  # 🔗 Integration Service — Connecteurs externes (banques, DGI, etc.)
+  # ======================================================
+  integration-service:
+    build:
+      context: ./integration-service
+      dockerfile: Dockerfile
+    container_name: oxalio-integration
+    expose:
+      - "8083"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+    networks:
+      - oxalio-net
+
+# ======================================================
+# 🌐 Réseau interne commun aux services
+# ======================================================
+networks:
+  oxalio-net:
+    driver: bridge

@@ -1,0 +1,9 @@
+spring:
+  config:
+    activate:
+      on-profile: mock
+
+dgi:
+  endpoint: "http://localhost:8082/mock-dgi"
+  auth-token: DGI_MOCK_TOKEN
+  timeout-ms: 15000
