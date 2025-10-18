@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import InvoiceDetail from './pages/InvoiceDetail';
 import { useAuthStore } from './store/authStore';
+import FneDemo from './pages/FneDemo'
 
 const qc = new QueryClient();
 
@@ -23,6 +24,7 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
             <Route path="/invoice/:id" element={<PrivateRoute><InvoiceDetail /></PrivateRoute>} />
+            <Route path="/" element={<FneDemo />} />
           </Routes>
         </Layout>
       </BrowserRouter>
