@@ -1,7 +1,3 @@
-Parfait 👍 on va structurer cette **étape “pré-production”** proprement — pour passer d’un simple mock à une version capable de dialoguer avec un **endpoint réel de la DGI**.
-
----
-
 ## 🧭 Plan de travail « Pré-production »
 
 | Étape                         | Objectif                                                                               | Statut attendu |
@@ -206,4 +202,3 @@ Résultat attendu :
 
 ---
 
-Veux-tu que je te génère directement les fichiers **`DgiClient.java`**, **`InvoiceService` (version enrichie)** et **`InvoiceController`** prêts à copier-coller dans ton projet ? (ce qui t’éviterait de les taper à la main).
