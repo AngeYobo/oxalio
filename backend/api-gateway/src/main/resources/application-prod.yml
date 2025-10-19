@@ -26,3 +26,4 @@ spring:
             - Path=/api/v1/integration/**
           filters:
             - StripPrefix=2
+

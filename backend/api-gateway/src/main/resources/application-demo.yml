@@ -3,7 +3,7 @@ spring:
     activate:
       on-profile: demo
 
-  cloud:
+  cloud:               # ✅ même bloc `spring:`
     gateway:
       routes:
         - id: demo-invoice
@@ -12,14 +12,12 @@ spring:
             - Path=/api/v1/invoices/**
           filters:
             - StripPrefix=2
-
         - id: demo-auth
           uri: https://httpbin.org/anything
           predicates:
             - Path=/api/v1/auth/**
           filters:
             - StripPrefix=2
-
         - id: demo-integration
           uri: https://httpbin.org/anything
           predicates:
