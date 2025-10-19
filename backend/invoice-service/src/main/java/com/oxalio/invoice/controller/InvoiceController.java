@@ -2,7 +2,6 @@ package com.oxalio.invoice.controller;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -26,5 +25,14 @@ public class InvoiceController {
         invoice.put("totals", totals);
 
         return ResponseEntity.ok(invoice);
+    }
+
+    @PostMapping
+    public ResponseEntity<Map<String, Object>> createInvoice(@RequestBody Map<String, Object> invoice) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "RECEIVED");
+        response.put("invoiceNumber", invoice.get("invoiceNumber"));
+        response.put("message", "Facture mock reçue côté invoice-service ✅");
+        return ResponseEntity.ok(response);
     }
 }

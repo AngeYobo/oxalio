@@ -1,0 +1,386 @@
+openapi: 3.1.0
+info:
+  title: FNE API (Draft Oxalio)
+  version: 1.0.0
+  description: >
+    Spécification Draft inspirée de la présentation FNE/DGI pour prototypage Oxalio.
+    Couvre soumission de factures, consultation, PDF/QR, annulation, avoirs, webhooks,
+    idempotence et quotas.
+servers:
+  - url: https://fne.dgi.gov.ci/api/v1
+    description: Production (DGI)
+  - url: https://sandbox.dgi.gov.ci/fne/api/v1
+    description: Bac à sable (DGI)
+  - url: http://localhost:3005
+    description: Mock local
+
+tags:
+  - name: Invoices
+  - name: Admin
+  - name: Health
+
+paths:
+  /invoices:
+    post:
+      tags: [Invoices]
+      summary: Soumettre une facture pour validation/signature FNE
+      operationId: submitInvoice
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          description: UUID v4 recommandé. Même clé = même réponse pendant 24h.
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InvoiceSubmit' }
+      responses:
+        '202':
+          $ref: '#/components/responses/AcceptedRef'
+        '201':
+          description: Créée et signée immédiatement
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InvoiceSigned' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '500': { $ref: '#/components/responses/Error' }
+
+  /invoices/{reference}:
+    get:
+      tags: [Invoices]
+      summary: Consulter une facture FNE
+      operationId: getInvoice
+      parameters:
+        - $ref: '#/components/parameters/Reference'
+      responses:
+        '200':
+          description: OK
+          headers:
+            ETag:
+              description: Hash de contenu
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InvoiceSigned' }
+        '404': { $ref: '#/components/responses/Error' }
+
+  /invoices/{reference}/events:
+    get:
+      tags: [Invoices]
+      summary: Historique d’évènements de la facture
+      operationId: listInvoiceEvents
+      parameters:
+        - $ref: '#/components/parameters/Reference'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/InvoiceEvent' }
+        '404': { $ref: '#/components/responses/Error' }
+
+  /invoices/{reference}/pdf:
+    get:
+      tags: [Invoices]
+      summary: Récupérer le PDF officiel
+      operationId: getInvoicePdf
+      parameters:
+        - $ref: '#/components/parameters/Reference'
+      responses:
+        '200':
+          description: PDF
+          content:
+            application/pdf: {}
+        '404': { $ref: '#/components/responses/Error' }
+
+  /invoices/{reference}/qrcode:
+    get:
+      tags: [Invoices]
+      summary: Récupérer l’image PNG du QR-code
+      operationId: getInvoiceQr
+      parameters:
+        - $ref: '#/components/parameters/Reference'
+      responses:
+        '200':
+          description: PNG
+          content:
+            image/png: {}
+        '404': { $ref: '#/components/responses/Error' }
+
+  /invoices/{reference}/cancel:
+    post:
+      tags: [Invoices]
+      summary: Annuler une facture (storno)
+      operationId: cancelInvoice
+      parameters:
+        - $ref: '#/components/parameters/Reference'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CancelRequest' }
+      responses:
+        '200':
+          description: Annulée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reference: { type: string }
+                  status:
+                    type: string
+                    enum: [CANCELLED]
+                  cancelledAt:
+                    type: string
+                    format: date-time
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+
+  /invoices/{reference}/credit-note:
+    post:
+      tags: [Invoices]
+      summary: Émettre un avoir lié à la facture
+      operationId: createCreditNote
+      parameters:
+        - $ref: '#/components/parameters/Reference'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InvoiceSubmit' }
+      responses:
+        '201':
+          description: Avoir créé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InvoiceSigned' }
+        '422': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+
+  /invoices:
+    get:
+      tags: [Invoices]
+      summary: Lister les factures
+      operationId: listInvoices
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [RECEIVED, VALIDATING, ACCEPTED, SIGNED, REJECTED, CANCELLED, CREDITED]
+        - in: query
+          name: from
+          schema: { type: string, format: date }
+        - in: query
+          name: to
+          schema: { type: string, format: date }
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+        - in: query
+          name: size
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+        - in: query
+          name: sort
+          schema: { type: string, example: issueDate,desc }
+      responses:
+        '200':
+          description: OK
+          headers:
+            Rate-Limit-Limit: { schema: { type: integer } }
+            Rate-Limit-Remaining: { schema: { type: integer } }
+            Rate-Limit-Reset: { schema: { type: integer, description: 'epoch seconds' } }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoicePage'
+
+  /stickers/balance:
+    get:
+      tags: [Admin]
+      summary: Solde de stickers/licences disponibles
+      operationId: getStickerBalance
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  remaining: { type: integer, minimum: 0 }
+
+  /health:
+    get:
+      tags: [Health]
+      summary: État du service
+      operationId: health
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [UP, DOWN] }
+                  time: { type: string, format: date-time }
+
+components:
+  parameters:
+    Reference:
+      in: path
+      name: reference
+      required: true
+      schema: { type: string }
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: true
+      schema: { type: string, description: 'UUID v4 recommandé' }
+
+  responses:
+    AcceptedRef:
+      description: Accepted
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              reference: { type: string }
+              status: { type: string, example: RECEIVED }
+              message: { type: string }
+              links:
+                type: object
+                additionalProperties: { type: string }
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    Party:
+      type: object
+      properties:
+        taxId: { type: string }
+        companyName: { type: string }
+        name: { type: string }
+        address: { type: string }
+    Line:
+      type: object
+      required: [description, quantity, unitPrice]
+      properties:
+        description: { type: string, minLength: 1, maxLength: 512 }
+        quantity: { type: number, minimum: 0 }
+        unitPrice: { type: number, minimum: 0 }
+        vatRate: { type: number, minimum: 0, maximum: 100 }
+        vatAmount: { type: number, minimum: 0 }
+        discount: { type: number, minimum: 0 }
+    Totals:
+      type: object
+      required: [subtotal, totalVat, totalAmount]
+      properties:
+        subtotal: { type: number }
+        totalVat: { type: number }
+        totalAmount: { type: number }
+    InvoiceSubmit:
+      type: object
+      required: [invoiceNumber, issueDate, currency, seller, buyer, lines, totals]
+      properties:
+        invoiceNumber: { type: string }
+        issueDate: { type: string, format: date-time }
+        currency: { type: string, minLength: 3, maxLength: 3, example: XOF }
+        invoiceType: { type: string, enum: [STANDARD, CREDIT_NOTE, PROFORMA], default: STANDARD }
+        paymentMode: { type: string, enum: [CASH, CARD, TRANSFER, MOBILE], default: CASH }
+        seller: { $ref: '#/components/schemas/Party' }
+        buyer: { $ref: '#/components/schemas/Party' }
+        lines:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/Line' }
+        totals: { $ref: '#/components/schemas/Totals' }
+        metadata: { type: object, additionalProperties: true }
+        notify:
+          type: object
+          properties:
+            webhookUrl: { type: string, format: uri }
+    InvoiceEvent:
+      type: object
+      properties:
+        at: { type: string, format: date-time }
+        status:
+          type: string
+          enum: [RECEIVED, VALIDATING, ACCEPTED, SIGNED, REJECTED, CANCELLED, CREDITED]
+        message: { type: string }
+    InvoiceSigned:
+      allOf:
+        - $ref: '#/components/schemas/InvoiceSubmit'
+        - type: object
+          properties:
+            reference: { type: string }
+            status:
+              type: string
+              enum: [RECEIVED, VALIDATING, ACCEPTED, SIGNED, REJECTED, CANCELLED, CREDITED]
+            signature: { type: string, description: 'JWS/base64' }
+            qrCode: { type: string, description: 'data:image/png;base64,...' }
+            hash: { type: string }
+            processedAt: { type: string, format: date-time }
+            events:
+              type: array
+              items: { $ref: '#/components/schemas/InvoiceEvent' }
+    InvoiceSummary:
+      type: object
+      properties:
+        reference: { type: string }
+        invoiceNumber: { type: string }
+        status:
+          type: string
+          enum: [RECEIVED, VALIDATING, ACCEPTED, SIGNED, REJECTED, CANCELLED, CREDITED]
+        totalAmount: { type: number }
+        currency: { type: string }
+        issueDate: { type: string, format: date-time }
+    InvoicePage:
+      type: object
+      properties:
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer }
+        content:
+          type: array
+          items: { $ref: '#/components/schemas/InvoiceSummary' }
+    Error:
+      type: object
+      properties:
+        timestamp: { type: string, format: date-time }
+        httpStatus: { type: integer }
+        code: { type: string }
+        message: { type: string }
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field: { type: string }
+              issue: { type: string }
+        correlationId: { type: string }
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

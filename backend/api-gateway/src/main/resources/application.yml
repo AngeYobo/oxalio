@@ -7,6 +7,11 @@ spring:
   profiles:
     active: demo
 
+  security:
+    user:
+      name: admin
+      password: admin
+
   cloud:
     gateway:
       default-filters:
@@ -26,7 +31,6 @@ spring:
             allowCredentials: true
 
       routes:
-        # ✅ 1. Auth Service (placeholder)
         - id: auth-service
           uri: http://localhost:8081
           predicates:
@@ -34,7 +38,6 @@ spring:
           filters:
             - StripPrefix=2
 
-        # ✅ 2. Invoice Service (🟢 pointé vers port 8081)
         - id: invoice-service
           uri: http://localhost:8082
           predicates:
@@ -42,7 +45,6 @@ spring:
           filters:
             - StripPrefix=2
 
-        # ✅ 3. Integration Service (placeholder)
         - id: integration-service
           uri: http://localhost:8083
           predicates:
@@ -54,8 +56,10 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,loggers
+        include: health, info, metrics, loggers, gateway
   endpoint:
+    gateway:
+      enabled: true        # ✅ Activation explicite
     health:
       show-details: always
   metrics:

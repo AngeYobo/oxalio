@@ -13,17 +13,19 @@ public class SecurityConfig {
     @Bean
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
         return http
-            .csrf(ServerHttpSecurity.CsrfSpec::disable)
-            .authorizeExchange(exchanges -> exchanges
+            .csrf().disable()
+            .authorizeExchange()
                 .pathMatchers(
                     "/api/v1/health",
                     "/api/v1/readiness",
                     "/api/v1/auth/**",
-                    "/actuator/**"
+                    "/actuator/**",
+                    "/api/v1/invoices/**"
                 ).permitAll()
                 .anyExchange().authenticated()
-            )
-            // ❌ PAS d'addFilterBefore/At/AfTER ici (on évite SecurityWebFiltersOrder)
+            .and()
+            .httpBasic()   // ✅ compatible avec Spring Boot 2.x
+            .and()
             .build();
     }
 }

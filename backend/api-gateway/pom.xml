@@ -15,45 +15,50 @@
 
   <dependencies>
 
-    <!-- ✅ WebFlux (Reactive stack) -->
+    <!-- ✅ WebFlux (stack réactive) -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-webflux</artifactId>
     </dependency>
 
-    <!-- ✅ Spring Cloud Gateway -->
+    <!-- ✅ Spring Cloud Gateway (routeur principal) -->
     <dependency>
       <groupId>org.springframework.cloud</groupId>
       <artifactId>spring-cloud-starter-gateway</artifactId>
     </dependency>
 
-    <!-- ✅ Sécurité (auto WebFlux) -->
+    <!-- ✅ Expose les endpoints /actuator/gateway/... -->
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-gateway-server</artifactId>
+    </dependency>
+
+    <!-- ✅ Sécurité WebFlux -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-security</artifactId>
     </dependency>
-    
 
-    <!-- ✅ OAuth2 Resource Server (JWT) -->
+    <!-- ✅ JWT / OAuth2 Resource Server -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
     </dependency>
 
-    <!-- ✅ Actuator -->
+    <!-- ✅ Actuator (pour santé, métriques, routes, etc.) -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-actuator</artifactId>
     </dependency>
 
-    <!-- ✅ Module commun -->
+    <!-- ✅ Module commun Oxalio -->
     <dependency>
       <groupId>com.oxalio</groupId>
       <artifactId>common</artifactId>
       <version>1.0.0</version>
     </dependency>
 
-    <!-- ✅ Outils Dev -->
+    <!-- ✅ Devtools (optionnel) -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-devtools</artifactId>
@@ -62,6 +67,7 @@
     </dependency>
 
   </dependencies>
+
 
   <dependencyManagement>
     <dependencies>
