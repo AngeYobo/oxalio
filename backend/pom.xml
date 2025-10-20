@@ -10,7 +10,10 @@
   <name>Oxalio Platform</name>
 
   <modules>
-    <module>backend</module>
-    <!-- si un jour tu ajoutes d'autres modules à la racine (ex: docs, tools...) -->
+    <module>common</module>
+    <module>api-gateway</module>
+    <module>auth-service</module>
+    <module>invoice-service</module>
+    <module>integration-service</module>
   </modules>
 </project>
