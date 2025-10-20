@@ -1,4 +1,6 @@
 name: Maven CI (api-gateway)
+run: mvn -Pci -ntp clean install -pl common,api-gateway -am
+working-directory: .
 
 on:
   push:
