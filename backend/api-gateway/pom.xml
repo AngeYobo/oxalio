@@ -11,7 +11,7 @@
 
   <parent>
     <groupId>com.oxalio</groupId>
-    <artifactId>oxalio-backend</artifactId>
+    <artifactId>oxalio-platform</artifactId> 
     <version>1.0.0</version>
   </parent>
 
