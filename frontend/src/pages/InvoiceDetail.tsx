@@ -1,3 +1,5 @@
+// frontend/src/pages/invoiceDetail.tsx
+
 import { useParams } from 'react-router-dom';
 import { useInvoice } from '../hooks/useInvoices';
 

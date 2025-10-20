@@ -14,11 +14,11 @@ spring:
             - StripPrefix=2
 
         - id: invoice-service
-          uri: http://invoice-service:8082
+          uri: http://localhost:8082
           predicates:
             - Path=/api/v1/invoices/**
           filters:
-            - StripPrefix=2
+            - StripPrefix=3
 
         - id: integration-service
           uri: http://integration-service:8083

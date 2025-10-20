@@ -5,7 +5,7 @@
     application:
       name: invoice-service
     profiles:
-      active: mock   # 👈 Profil par défaut
+      active: prod   # 👈 Profil par défaut
 
     datasource:
       url: jdbc:h2:mem:oxalio_invoice_db;DB_CLOSE_DELAY=-1
@@ -32,3 +32,9 @@
       root: INFO
       org.springframework.web: DEBUG
       com.oxalio.invoice: DEBUG
+    
+  springdoc:
+    api-docs:
+      enabled: false
+    swagger-ui:
+      enabled: false

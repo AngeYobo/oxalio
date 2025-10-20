@@ -3,7 +3,29 @@ spring:
     activate:
       on-profile: prod
 
+server:
+  # Indique à Spring d'utiliser les en-têtes (X-Forwarded-*) posés par le gateway/Kong
+  forward-headers-strategy: framework
+
 dgi:
   endpoint: https://prod.dgi.gov.ci/api/fne/invoices
   auth-token: DGI_PROD_TOKEN
   timeout-ms: 15000
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    # (optionnel) si tu veux ne documenter que tes endpoints applicatifs :
+    # packages-to-scan: com.oxalio.invoice
+  swagger-ui:
+    path: /swagger-ui.html
+    # On propose les 2 sources : la spec générée + la spec FNE statique
+    urls:
+      - name: Invoice Service (Generated)
+        url: /v3/api-docs
+      - name: FNE (Draft Oxalio)
+        url: /openapi/fne.yaml
+    doc-expansion: none
+    display-request-duration: true
+    # évite que Swagger cherche une URL par défaut non souhaitée
+    disable-swagger-default-url: true

@@ -1,3 +1,5 @@
+// frontend/src/fne.ts
+
 import { FneClient } from './fneClient'
 
 export const fne = new FneClient({

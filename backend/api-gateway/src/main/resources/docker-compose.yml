@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   # ======================================================
-  # 🧩 Oxalio API Gateway — Front Door de toute la plateforme
+  # Oxalio API Gateway — Front Door de toute la plateforme
   # ======================================================
   api-gateway:
     build:
@@ -21,7 +21,7 @@ services:
       - oxalio-net
 
   # ======================================================
-  # 🔐 Auth Service — Gestion des comptes, tokens, etc.
+  # Auth Service — Gestion des comptes, tokens, etc.
   # ======================================================
   auth-service:
     build:
@@ -36,7 +36,7 @@ services:
       - oxalio-net
 
   # ======================================================
-  # 🧾 Invoice Service — Module FNE / DGI (facturation)
+  # Invoice Service — Module FNE / DGI (facturation)
   # ======================================================
   invoice-service:
     build:
@@ -51,7 +51,7 @@ services:
       - oxalio-net
 
   # ======================================================
-  # 🔗 Integration Service — Connecteurs externes (banques, DGI, etc.)
+  # Integration Service — Connecteurs externes (banques, DGI, etc.)
   # ======================================================
   integration-service:
     build:
@@ -66,7 +66,7 @@ services:
       - oxalio-net
 
 # ======================================================
-# 🌐 Réseau interne commun aux services
+# Réseau interne commun aux services
 # ======================================================
 networks:
   oxalio-net:

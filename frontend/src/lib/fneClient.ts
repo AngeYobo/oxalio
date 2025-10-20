@@ -1,3 +1,5 @@
+// frontend/src/fneClient.ts
+
 import axios, { AxiosInstance } from 'axios'
 
 export interface Party {

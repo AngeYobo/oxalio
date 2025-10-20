@@ -23,8 +23,9 @@ spring:
         corsConfigurations:
           '[/**]':
             allowedOrigins:
-              - "https://8080-sidereal-election-ozhudl.us1.demeter.run"
+              - "https://3000-sidereal-election-ozhudl.us1.demeter.run"
               - "http://localhost:3000"
+              - "https://8080-sidereal-election-ozhudl.us1.demeter.run"
             allowedMethods: [ GET, POST, PUT, PATCH, DELETE, OPTIONS ]
             allowedHeaders: "*"
             exposedHeaders: [ Authorization, Cache-Control, Content-Type, X-Oxalio-Gateway ]
@@ -43,7 +44,7 @@ spring:
           predicates:
             - Path=/api/v1/invoices/**
           filters:
-            - StripPrefix=2
+            - StripPrefix=3
 
         - id: integration-service
           uri: http://localhost:8083
