@@ -25,7 +25,7 @@
 
   <dependencyManagement>
     <dependencies>
-      <!-- 📦 Spring Boot BOM -->
+      <!-- Spring Boot BOM -->
       <dependency>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-dependencies</artifactId>
@@ -34,7 +34,7 @@
         <scope>import</scope>
       </dependency>
 
-      <!-- 📦 Spring Cloud BOM -->
+      <!-- Spring Cloud BOM -->
       <dependency>
         <groupId>org.springframework.cloud</groupId>
         <artifactId>spring-cloud-dependencies</artifactId>
