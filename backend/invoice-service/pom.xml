@@ -45,7 +45,6 @@
     <dependency>
       <groupId>com.oxalio</groupId>
       <artifactId>common</artifactId>
-      <version>1.0.0</version>
     </dependency>
 
         <!-- ✅ Swagger UI (Springdoc OpenAPI 3.1) -->
