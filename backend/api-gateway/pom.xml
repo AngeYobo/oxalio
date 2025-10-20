@@ -3,172 +3,42 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <!-- Encodage global UTF-8 -->
-  <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-  </properties>
-
   <parent>
     <groupId>com.oxalio</groupId>
-    <artifactId>oxalio-platform</artifactId> 
+    <artifactId>oxalio-platform</artifactId>
     <version>1.0.0</version>
+    <relativePath>../pom.xml</relativePath>
   </parent>
 
   <artifactId>api-gateway</artifactId>
   <name>Oxalio API Gateway</name>
-  <description>Reactive API Gateway for Oxalio Platform (Spring Cloud Gateway + Security + Actuator)</description>
+  <description>Reactive API Gateway for Oxalio Platform</description>
 
   <dependencies>
-    <!-- WebFlux -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-webflux</artifactId>
     </dependency>
-
-    <!-- Spring Cloud Gateway -->
     <dependency>
       <groupId>org.springframework.cloud</groupId>
       <artifactId>spring-cloud-starter-gateway</artifactId>
     </dependency>
-
-    <!-- Actuator / Gateway endpoints -->
-    <dependency>
-      <groupId>org.springframework.cloud</groupId>
-      <artifactId>spring-cloud-gateway-server</artifactId>
-    </dependency>
-
-    <!-- Sécurité -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-security</artifactId>
     </dependency>
-
-    <!-- OAuth2 Resource Server -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
     </dependency>
-
-    <!-- Actuator -->
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-actuator</artifactId>
-    </dependency>
-
-    <!-- Module commun Oxalio -->
-    <dependency>
-      <groupId>com.oxalio</groupId>
-      <artifactId>common</artifactId>
-      <version>1.0.0</version>
-    </dependency>
-
-    <!-- Devtools -->
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-devtools</artifactId>
-      <scope>runtime</scope>
-      <optional>true</optional>
-    </dependency>
-
-    <!-- Guice -->
-    <dependency>
-      <groupId>com.google.inject</groupId>
-      <artifactId>guice</artifactId>
-      <version>7.0.0</version>
-    </dependency>
-
-    <!-- Netty -->
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty-all</artifactId>
-    </dependency>
   </dependencies>
-
-  <dependencyManagement>
-    <dependencies>
-      <!-- Spring Cloud BOM -->
-      <dependency>
-        <groupId>org.springframework.cloud</groupId>
-        <artifactId>spring-cloud-dependencies</artifactId>
-        <version>2023.0.3</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-
-      <!-- Netty BOM -->
-      <dependency>
-        <groupId>io.netty</groupId>
-        <artifactId>netty-bom</artifactId>
-        <version>4.2.7.Final</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-
-      <!-- Version unique BouncyCastle -->
-      <dependency>
-        <groupId>org.bouncycastle</groupId>
-        <artifactId>bcprov-jdk18on</artifactId>
-        <version>1.80</version>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
 
   <build>
     <plugins>
-      <!-- Spring Boot -->
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
-        <configuration>
-          <mainClass>com.oxalio.gateway.Application</mainClass>
-        </configuration>
-      </plugin>
-
-      <!-- Versions plugin -->
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>versions-maven-plugin</artifactId>
-        <version>2.17.1</version>
       </plugin>
     </plugins>
   </build>
-
-  <!-- Profil CI pour activer les règles strictes Enforcer -->
-  <profiles>
-    <profile>
-      <id>ci</id>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-enforcer-plugin</artifactId>
-            <version>3.4.1</version>
-            <executions>
-              <execution>
-                <id>enforce-deps</id>
-                <goals>
-                  <goal>enforce</goal>
-                </goals>
-                <configuration>
-                  <rules>
-                    <DependencyConvergence/>
-                    <RequireUpperBoundDeps/>
-                    <banDuplicatePomDependencyVersions/>
-                    <requireJavaVersion>
-                      <version>[17,)</version>
-                    </requireJavaVersion>
-                    <requireMavenVersion>
-                      <version>[3.9.0,)</version>
-                    </requireMavenVersion>
-                  </rules>
-                  <fail>true</fail>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-  </profiles>
 </project>
