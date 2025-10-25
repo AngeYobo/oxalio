@@ -1,64 +1,106 @@
 package com.oxalio.invoice.controller;
 
-import org.springframework.http.MediaType;
+import com.oxalio.invoice.dto.InvoiceRequest;
+import com.oxalio.invoice.dto.InvoiceResponse;
+import com.oxalio.invoice.service.InvoiceService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.*;
+import java.util.List;
 
-@CrossOrigin(
-    origins = {
-        "https://3000-sidereal-election-ozhudl.us1.demeter.run",
-        "http://localhost:3000"
-    },
-    allowCredentials = "true"
-)
+@Slf4j
 @RestController
-@RequestMapping(value = "/invoices", produces = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping("/api/v1/invoices")
+@RequiredArgsConstructor
+@Validated
+@Tag(name = "Invoices", description = "API de gestion des factures FNE")
 public class InvoiceController {
 
-    // ✅ Source mock commune
-    private Map<String, Object> mockInvoice(String number, String buyer, int amount, String status) {
-        Map<String, Object> inv = new HashMap<>();
-        inv.put("invoiceNumber", number);
-        inv.put("currency", "XOF");
-        inv.put("status", status);
-        inv.put("buyer", Map.of("name", buyer));
-        inv.put("totals", Map.of("totalAmount", amount));
-        return inv;
+    private final InvoiceService invoiceService;
+
+    @PostMapping
+    @Operation(
+        summary = "Créer une facture",
+        description = "Crée une nouvelle facture conforme DGI avec génération automatique du numéro, stickerId et QR code",
+        responses = {
+            @ApiResponse(
+                responseCode = "201",
+                description = "Facture créée avec succès",
+                content = @Content(schema = @Schema(implementation = InvoiceResponse.class))
+            ),
+            @ApiResponse(responseCode = "400", description = "Données de facture invalides"),
+            @ApiResponse(responseCode = "500", description = "Erreur serveur")
+        }
+    )
+    public ResponseEntity<InvoiceResponse> createInvoice(@Valid @RequestBody InvoiceRequest request) {
+        log.info("Création d'une facture de type {} pour le vendeur {}",
+                request.getInvoiceType(), request.getSeller().getTaxId());
+        InvoiceResponse response = invoiceService.createInvoice(request);
+        log.info("Facture créée avec succès : {}", response.getInvoiceNumber());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    // ✅ Liste pour le tableau: GET /api/v1/invoices
     @GetMapping
-    public ResponseEntity<List<Map<String, Object>>> listInvoices() {
-        List<Map<String, Object>> invoices = new ArrayList<>();
-        invoices.add(mockInvoice("INV-2025-0001", "Client Démo", 11800, "MOCK_READY"));
-        invoices.add(mockInvoice("INV-2025-0002", "Client Test",  5600,  "MOCK_SENT"));
-        invoices.add(mockInvoice("INV-2025-0003", "Client VIP",   22500, "MOCK_READY"));
+    @Operation(summary = "Lister toutes les factures", description = "Récupère la liste complète des factures enregistrées")
+    public ResponseEntity<List<InvoiceResponse>> getAllInvoices() {
+        log.info("Récupération de toutes les factures");
+        List<InvoiceResponse> invoices = invoiceService.getAllInvoices();
+        log.info("Nombre de factures récupérées : {}", invoices.size());
         return ResponseEntity.ok(invoices);
     }
 
-    // ✅ Détail unitaire: GET /api/v1/invoices/{id}
     @GetMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> getInvoiceById(@PathVariable String id) {
-        // Pour la démo: renvoie toujours un mock en réutilisant l'id
-        Map<String, Object> inv = mockInvoice(id, "Client Démo", 11800, "MOCK_READY");
-        return ResponseEntity.ok(inv);
+    @Operation(summary = "Récupérer une facture par ID", description = "Récupère les détails d'une facture spécifique")
+    public ResponseEntity<InvoiceResponse> getInvoiceById(@PathVariable Long id) {
+        log.info("Récupération de la facture avec ID : {}", id);
+        InvoiceResponse response = invoiceService.getInvoiceById(id);
+        return ResponseEntity.ok(response);
     }
 
-    // ✅ Exemple unitaire existant: GET /api/v1/invoices/demo
-    @GetMapping("/demo")
-    public ResponseEntity<Map<String, Object>> demoInvoice() {
-        return ResponseEntity.ok(mockInvoice("INV-2025-0001", "Client Démo", 11800, "MOCK_READY"));
+    @GetMapping("/number/{invoiceNumber}")
+    @Operation(summary = "Récupérer une facture par numéro", description = "Récupère les détails d'une facture par son numéro unique")
+    public ResponseEntity<InvoiceResponse> getInvoiceByNumber(@PathVariable String invoiceNumber) {
+        log.info("Récupération de la facture numéro : {}", invoiceNumber);
+        InvoiceResponse response = invoiceService.getInvoiceByNumber(invoiceNumber);
+        return ResponseEntity.ok(response);
     }
 
-    // ✅ Création mock: POST /api/v1/invoices
-    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String, Object>> createInvoice(@RequestBody Map<String, Object> invoice) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("status", "RECEIVED");
-        response.put("invoiceNumber", invoice.get("invoiceNumber"));
-        response.put("message", "Facture mock reçue côté invoice-service ✅");
+    @PutMapping("/{id}")
+    @Operation(summary = "Mettre à jour une facture", description = "Met à jour les données d'une facture existante")
+    public ResponseEntity<InvoiceResponse> updateInvoice(
+            @PathVariable Long id,
+            @Valid @RequestBody InvoiceRequest request) {
+        log.info("Mise à jour de la facture avec ID : {}", id);
+        InvoiceResponse response = invoiceService.updateInvoice(id, request);
+        log.info("Facture mise à jour avec succès : {}", response.getInvoiceNumber());
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Supprimer une facture", description = "Supprime une facture du système")
+    public ResponseEntity<Void> deleteInvoice(@PathVariable Long id) {
+        log.info("Suppression de la facture avec ID : {}", id);
+        invoiceService.deleteInvoice(id);
+        log.info("Facture supprimée avec succès");
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/submit-to-dgi")
+    @Operation(summary = "Soumettre une facture à la DGI", description = "Soumet une facture au système FNE de la DGI et récupère la référence")
+    public ResponseEntity<InvoiceResponse> submitToDgi(@PathVariable Long id) {
+        log.info("Soumission de la facture {} à la DGI", id);
+        InvoiceResponse response = invoiceService.submitToDgi(id);
+        log.info("Facture soumise avec succès. Référence DGI : {}", response.getDgiReference());
         return ResponseEntity.ok(response);
     }
 }

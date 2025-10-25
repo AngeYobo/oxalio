@@ -8,7 +8,7 @@ server:
   forward-headers-strategy: framework
 
 dgi:
-  endpoint: https://prod.dgi.gov.ci/api/fne/invoices
+  endpoint: https://prod.dgi.gov.ci/api/fne/invoicesf
   auth-token: DGI_PROD_TOKEN
   timeout-ms: 15000
 

@@ -1,6 +1,6 @@
 package com.oxalio.invoice.mock;
 
-import com.oxalio.invoice.dto.DgiInvoiceResponseDTO;
+import com.oxalio.invoice.dto.InvoiceResponse;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
@@ -11,8 +11,8 @@ import java.time.Instant;
 public class MockDgiController {
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public DgiInvoiceResponseDTO receiveInvoice(@RequestBody String ignored) {
-        DgiInvoiceResponseDTO resp = new DgiInvoiceResponseDTO();
+    public InvoiceResponse receiveInvoice(@RequestBody String ignored) {
+        InvoiceResponse resp = new InvoiceResponse();
         resp.setReference("MOCK-REF-123");
         resp.setStatus("ACCEPTED");
         resp.setMessage("Facture acceptée en mode mock local");

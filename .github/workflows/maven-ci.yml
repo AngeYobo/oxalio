@@ -23,23 +23,23 @@ jobs:
           java-version: '17'
           cache: 'maven'
 
-      # 3. Cache .m2 plus fin pour accélérer les builds
+      # 3. Cache .m2 pour accélérer les builds
       - name: Cache local Maven repository
         uses: actions/cache@v4
         with:
           path: ~/.m2/repository
-          key: maven-force-rebuild-${{ github.run_id }}
+          key: maven-${{ github.run_id }}
           restore-keys: |
             maven-
 
-      # 4. Build modules (common + api-gateway)
-      - name: Build common + api-gateway
-        run: mvn -Pci -ntp clean install -pl common,api-gateway -am
+      # 4. Build backend complet (évite les problèmes de dépendances locales)
+      - name: Build all backend modules
+        run: mvn -ntp clean install
         working-directory: backend
 
-      # 5. Exécute les tests
-      - name: Run tests
-        run: mvn -Pci -ntp test -pl api-gateway
+      # 5. Exécute les tests sur api-gateway uniquement
+      - name: Run tests for api-gateway
+        run: mvn -ntp test -pl api-gateway
         working-directory: backend
 
       # 6. Archive les rapports de tests pour consultation

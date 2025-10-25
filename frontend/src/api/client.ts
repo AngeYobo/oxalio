@@ -7,7 +7,7 @@ const envUrl = import.meta.env.VITE_API_BASE_URL?.trim()
 // ✅ Fallback explicite pour éviter les URL relatives
 const baseURL = envUrl && envUrl.length > 0
   ? envUrl
-  : ''  // fallback local de dev
+  : 'http://localhost:8080'  // fallback local de dev
 
 console.log('🌍 API Base URL =', baseURL)
 console.log("🔎 VITE_API_BASE_URL (env brut) =", import.meta.env.VITE_API_BASE_URL);

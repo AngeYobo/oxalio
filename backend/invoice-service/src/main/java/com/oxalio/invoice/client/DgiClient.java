@@ -1,7 +1,7 @@
 package com.oxalio.invoice.client;
 
-import com.oxalio.invoice.dto.DgiInvoiceRequestDTO;
-import com.oxalio.invoice.dto.DgiInvoiceResponseDTO;
+import com.oxalio.invoice.dto.InvoiceRequest;
+import com.oxalio.invoice.dto.InvoiceResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -53,7 +53,7 @@ public class DgiClient {
     /**
      * Envoie une facture formatée au service FNE/DGI et récupère la réponse.
      */
-    public DgiInvoiceResponseDTO sendInvoice(DgiInvoiceRequestDTO request) {
+    public InvoiceResponse sendInvoice(InvoiceRequest request) {
         try {
             log.info("[DGI] Envoi facture {} à {}", request.getInvoiceNumber(), dgiEndpoint);
 
@@ -69,13 +69,13 @@ public class DgiClient {
                 headers.setBearerAuth(dgiAuthToken);
             }
 
-            HttpEntity<DgiInvoiceRequestDTO> entity = new HttpEntity<>(request, headers);
+            HttpEntity<InvoiceRequest> entity = new HttpEntity<>(request, headers);
 
-            ResponseEntity<DgiInvoiceResponseDTO> response = restTemplate.exchange(
+            ResponseEntity<InvoiceResponse> response = restTemplate.exchange(
                     dgiEndpoint,
                     HttpMethod.POST,
                     entity,
-                    DgiInvoiceResponseDTO.class
+                    InvoiceResponse.class
             );
 
             log.info("[DGI] Réponse pour facture {} : HTTP {}",
@@ -86,7 +86,7 @@ public class DgiClient {
         } catch (HttpStatusCodeException ex) {
             log.error("[DGI] Erreur HTTP {} — body={}",
                     ex.getStatusCode(), ex.getResponseBodyAsString());
-            DgiInvoiceResponseDTO error = new DgiInvoiceResponseDTO();
+            InvoiceResponse error = new InvoiceResponse();
             error.setStatus("REJECTED");
             error.setMessage(String.format("Erreur HTTP %s : %s",
                     ex.getStatusCode(), ex.getResponseBodyAsString()));
@@ -95,7 +95,7 @@ public class DgiClient {
         } catch (ResourceAccessException ex) {
             // Typiquement timeout ou DNS
             log.error("[DGI] Timeout ou erreur réseau: {}", ex.getMessage());
-            DgiInvoiceResponseDTO error = new DgiInvoiceResponseDTO();
+            InvoiceResponse error = new InvoiceResponse();
             error.setStatus("REJECTED");
             error.setMessage(String.format("Erreur réseau (%s): %s",
                     activeProfile, ex.getMessage()));
@@ -103,7 +103,7 @@ public class DgiClient {
 
         } catch (Exception ex) {
             log.error("[DGI] Exception interne: {}", ex.getMessage(), ex);
-            DgiInvoiceResponseDTO error = new DgiInvoiceResponseDTO();
+            InvoiceResponse error = new InvoiceResponse();
             error.setStatus("REJECTED");
             error.setMessage("Exception interne: " + ex.getMessage());
             return error;
