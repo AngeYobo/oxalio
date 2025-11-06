@@ -1,5 +1,6 @@
 package com.oxalio.invoice.entity;
 
+import com.oxalio.invoice.model.InvoiceStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -61,7 +62,9 @@ public class InvoiceEntity {
     @Column(columnDefinition = "CLOB")
     private String qrBase64;
 
-    private String status;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private InvoiceStatus status;
 
     // Champs DGI
     private String dgiReference;

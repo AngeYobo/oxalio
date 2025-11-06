@@ -1,3 +1,5 @@
+// InvoiceService.java
+
 package com.oxalio.invoice.service;
 
 import com.oxalio.invoice.dto.InvoiceRequest;
@@ -6,6 +8,7 @@ import com.oxalio.invoice.entity.InvoiceEntity;
 import com.oxalio.invoice.mapper.InvoiceMapper;
 import com.oxalio.invoice.repository.InvoiceRepository;
 import com.oxalio.invoice.service.QrCodeGenerator;
+import com.oxalio.invoice.model.InvoiceStatus;
 import com.oxalio.invoice.exception.InvoiceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,7 +44,7 @@ public class InvoiceService {
         entity.setInvoiceNumber(generateInvoiceNumber());
         entity.setStickerId(generateStickerId());
         entity.setIssueDate(Instant.now());
-        entity.setStatus("RECEIVED");
+        entity.setStatus(InvoiceStatus.RECEIVED);
 
         // Génération du QR code
         String qrContent = buildQRContent(entity);
@@ -123,19 +126,29 @@ public class InvoiceService {
     @Transactional
     public InvoiceResponse submitToDgi(Long id) {
         InvoiceEntity entity = invoiceRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Facture non trouvée avec l'ID : " + id));
+                .orElseThrow(() -> new InvoiceNotFoundException(id));
 
-        // Mock de la soumission DGI
-        entity.setStatus("SUBMITTED_TO_DGI");
+        // ✅ Idempotence : si déjà soumis, on renvoie tel quel
+        if (entity.getStatus() == InvoiceStatus.SUBMITTED_TO_DGI) {
+            log.info("Facture {} déjà soumise à la DGI (ref {}).",
+                    entity.getInvoiceNumber(), entity.getDgiReference());
+            return invoiceMapper.toResponse(entity);
+        }
+
+        // Mock soumission DGI
+        entity.setStatus(InvoiceStatus.SUBMITTED_TO_DGI);
         entity.setDgiReference("DGI-REF-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         entity.setDgiSubmittedAt(Instant.now());
 
-        InvoiceEntity updatedEntity = invoiceRepository.save(entity);
-        log.info("Facture soumise à la DGI : {} - Référence : {}", 
-                updatedEntity.getInvoiceNumber(), updatedEntity.getDgiReference());
+        // (optionnel mais recommandé) régénérer le QR avec la référence DGI
+        String qrPayload = buildQRContent(entity); // ou buildQrPayloadCertified(entity) si tu scindes
+        entity.setQrBase64(qrCodeGenerator.generateQRCodeBase64(qrPayload, 300, 300));
 
-        return invoiceMapper.toResponse(updatedEntity);
+        InvoiceEntity updated = invoiceRepository.save(entity);
+        log.info("Facture soumise à la DGI : {} - Réf : {}", updated.getInvoiceNumber(), updated.getDgiReference());
+        return invoiceMapper.toResponse(updated);
     }
+
 
     /**
      * Génère un numéro de facture unique.
