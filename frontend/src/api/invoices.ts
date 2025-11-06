@@ -1,21 +1,18 @@
 import axios from 'axios'
 
-/** Base API URL:
- * - Dev: from .env.development -> VITE_API_URL=http://localhost:8080
- * - Prod: from .env.production  -> VITE_API_URL=https://8080-...demeter.run
- */
+// Base API URL
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://8080-sidereal-election-ozhudl.us1.demeter.run/api/v1',
   timeout: 10000,
 })
 
-/* ---- Minimal types for the demo ---- */
-type DemoInvoice = {
+export type InvoiceResponse = {
+  id: number
   invoiceNumber: string
   currency: string
-  status?: string
-  buyer?: { name?: string }
-  totals?: { totalAmount?: number }
+  status: string
+  buyer: { name: string }
+  totals: { totalAmount: number }
 }
 
 export type InvoiceListItem = {
@@ -24,29 +21,24 @@ export type InvoiceListItem = {
   amount: number
   currency: string
   status: string
-  raw: DemoInvoice
+  raw: InvoiceResponse
 }
 
-/** The backend exposes /invoices/demo (single invoice).
- * We synthesize a small list on the frontend for the demo UI.
- */
+// ✅ Charger la vraie liste depuis ton backend
 export async function getInvoices(): Promise<InvoiceListItem[]> {
-  const r = await api.get<DemoInvoice>('/invoices/demo')
-  const one = r.data
-
-  return Array.from({ length: 5 }).map((_, i) => ({
-    id: `${one.invoiceNumber}-${i + 1}`,
-    client: one?.buyer?.name ?? 'Client Démo',
-    amount: one?.totals?.totalAmount ?? 11800,
-    currency: one?.currency ?? 'XOF',
-    status: one?.status ?? 'MOCK_READY',
-    raw: one,
+  const r = await api.get<InvoiceResponse[]>('/invoices')  // 👈 route réelle
+  return r.data.map((inv) => ({
+    id: inv.id.toString(),
+    client: inv.buyer?.name ?? '—',
+    amount: inv.totals?.totalAmount ?? 0,
+    currency: inv.currency ?? 'XOF',
+    status: inv.status ?? 'N/A',
+    raw: inv,
   }))
 }
 
-export async function getInvoiceById(id: string): Promise<DemoInvoice> {
-  // In real life: GET /invoices/{id}
-  // Here: reuse the demo invoice and override the id
-  const r = await api.get<DemoInvoice>('/invoices/demo')
-  return { ...r.data, invoiceNumber: id }
+// ✅ Charger une facture précise
+export async function getInvoiceById(id: string): Promise<InvoiceResponse> {
+  const r = await api.get<InvoiceResponse>(`/invoices/${id}`)  // 👈 route réelle
+  return r.data
 }

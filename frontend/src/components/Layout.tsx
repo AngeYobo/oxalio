@@ -1,7 +1,7 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 
-export default function Layout({ children }: { children: React.ReactNode }) {
+export default function Layout() {
   const navigate = useNavigate();
   const { token, logout } = useAuthStore();
 
@@ -11,7 +11,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link to="/" className="font-semibold text-lg">Oxalio</Link>
           <nav className="flex items-center gap-4">
-            <Link to="/" className="text-sm hover:underline">Dashboard</Link>
+            <Link to="/dashboard" className="text-sm hover:underline">Dashboard</Link>
             {token ? (
               <button
                 onClick={() => { logout(); navigate('/login'); }}
@@ -20,12 +20,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 Se déconnecter
               </button>
             ) : (
-              <Link to="/login" className="text-sm px-3 py-1.5 rounded border hover:bg-gray-100">Se connecter</Link>
+              <Link to="/login" className="text-sm px-3 py-1.5 rounded border hover:bg-gray-100">
+                Se connecter
+              </Link>
             )}
           </nav>
         </div>
       </header>
-      <main className="max-w-6xl mx-auto px-4 py-6">{children}</main>
+
+      <main className="max-w-6xl mx-auto px-4 py-6">
+        <Outlet />  {/* ✅ Ici s'afficheront Dashboard, Invoices, etc. */}
+      </main>
     </div>
   );
 }

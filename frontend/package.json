@@ -1,34 +1,40 @@
 {
   "name": "oxalio-frontend",
-  "version": "0.0.1",
   "private": true,
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --port 3000 --strictPort --host",
     "build": "tsc && vite build",
-    "preview": "vite preview --port 8082"
+    "preview": "vite preview",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.5",
-    "axios": "1.7.2",
+    "axios": "^1.12.2",
     "dotenv": "^17.2.3",
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
-    "react-router-dom": "6.22.3",
+    "lucide-react": "^0.294.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^6.20.0",
     "uuid": "^13.0.0",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
-    "@types/node": "^24.8.1",
-    "@types/react": "18.2.66",
-    "@types/react-dom": "18.2.22",
-    "@types/uuid": "^11.0.0",
-    "@vitejs/plugin-react": "^4.3.1",
-    "autoprefixer": "^10.4.21",
-    "postcss": "^8.5.6",
-    "scheduler": "^0.27.0",
-    "tailwindcss": "^3.4.14",
-    "typescript": "5.4.5",
-    "vite": "5.2.0"
-  }
+    "@types/react": "^18.2.43",
+    "@types/react-dom": "^18.2.17",
+    "@typescript-eslint/eslint-plugin": "^6.14.0",
+    "@typescript-eslint/parser": "^6.14.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.16",
+    "eslint": "^8.55.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.5",
+    "postcss": "^8.4.32",
+    "rollup": "^4.52.5",
+    "tailwindcss": "^3.3.6",
+    "typescript": "^5.2.2",
+    "vite": "^7.1.12"
+  },
+  "packageManager": "pnpm@10.19.0+sha512.c9fc7236e92adf5c8af42fd5bf1612df99c2ceb62f27047032f4720b33f8eacdde311865e91c411f2774f618d82f320808ecb51718bfa82c060c4ba7c76a32b8"
 }

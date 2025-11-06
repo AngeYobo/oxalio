@@ -1,17 +1,32 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
-interface AuthState {
+export type User = {
+  id: string;
+  name?: string;
+};
+
+export interface AuthState {
   token: string | null;
-  login: (username: string, password: string) => Promise<void>;
+  user: User | null;
+  login: (username: string, password: string) => void;
   logout: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  token: null,
-  login: async (username, password) => {
-    // mock login: accepte tout, renvoie un token fake
-    await new Promise((r) => setTimeout(r, 400));
-    set({ token: 'demo-token' });
-  },
-  logout: () => set({ token: null }),
-}));
+export const useAuthStore = create<AuthState>()(
+  persist<AuthState>(
+    (set) => ({
+      token: null,
+      user: null,
+      login: (username, password) => {
+        const token = btoa(`${username}:${password}`); // token mock
+        set({ token, user: { id: username, name: username } });
+      },
+      logout: () => set({ token: null, user: null }),
+    }),
+    { name: 'auth-store' }
+  )
+);
+
+// 🚀 Ajoute et exporte ce sélecteur
+export const selectIsAuthenticated = (s: AuthState) => Boolean(s.token);
