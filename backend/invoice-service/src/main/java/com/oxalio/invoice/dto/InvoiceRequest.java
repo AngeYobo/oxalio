@@ -1,5 +1,7 @@
 package com.oxalio.invoice.dto;
 
+import com.oxalio.invoice.model.SellerDTO;
+import com.oxalio.invoice.model.BuyerDTO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
@@ -12,9 +14,8 @@ import java.util.List;
 
 /**
  * DTO de requête pour la création d'une facture.
- * 
- * <p>Exemple de payload JSON :</p>
- * <pre>
+ *
+ * Exemple de payload JSON :
  * {
  *   "invoiceType": "STANDARD",
  *   "currency": "XOF",
@@ -45,7 +46,6 @@ import java.util.List;
  *   },
  *   "paymentMode": "TRANSFER"
  * }
- * </pre>
  */
 @Data
 @Builder
@@ -54,6 +54,7 @@ import java.util.List;
 public class InvoiceRequest {
 
     private String invoiceNumber;
+
     @NotBlank(message = "Le type de facture est obligatoire")
     @Pattern(regexp = "STANDARD|PROFORMA|CREDIT_NOTE", message = "Type de facture invalide")
     private String invoiceType;
@@ -84,60 +85,6 @@ public class InvoiceRequest {
 
     @Size(max = 500, message = "Les notes ne peuvent excéder 500 caractères")
     private String notes;
-
-    /**
-     * DTO pour les informations du vendeur
-     */
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class SellerDTO {
-        @NotBlank(message = "L'identifiant fiscal du vendeur est obligatoire")
-        @Pattern(regexp = "^CI[0-9]{7,10}$", message = "Format d'identifiant fiscal invalide")
-        private String taxId;
-
-        @NotBlank(message = "Le nom de l'entreprise est obligatoire")
-        @Size(min = 2, max = 200, message = "Le nom doit contenir entre 2 et 200 caractères")
-        private String companyName;
-
-        @NotBlank(message = "L'adresse du vendeur est obligatoire")
-        @Size(max = 300, message = "L'adresse ne peut excéder 300 caractères")
-        private String address;
-
-        @Email(message = "Format d'email invalide")
-        private String email;
-
-        @Pattern(regexp = "^\\+?[0-9]{8,15}$", message = "Format de téléphone invalide")
-        private String phone;
-    }
-
-    /**
-     * DTO pour les informations de l'acheteur
-     */
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class BuyerDTO {
-        @NotBlank(message = "L'identifiant fiscal de l'acheteur est obligatoire")
-        @Pattern(regexp = "^CI[0-9]{7,10}$", message = "Format d'identifiant fiscal invalide")
-        private String taxId;
-
-        @NotBlank(message = "Le nom de l'acheteur est obligatoire")
-        @Size(min = 2, max = 200, message = "Le nom doit contenir entre 2 et 200 caractères")
-        private String name;
-
-        @NotBlank(message = "L'adresse de l'acheteur est obligatoire")
-        @Size(max = 300, message = "L'adresse ne peut excéder 300 caractères")
-        private String address;
-
-        @Email(message = "Format d'email invalide")
-        private String email;
-
-        @Pattern(regexp = "^\\+?[0-9]{8,15}$", message = "Format de téléphone invalide")
-        private String phone;
-    }
 
     /**
      * DTO pour une ligne de facture

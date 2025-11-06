@@ -18,7 +18,7 @@ public class Invoice {
     private Instant createdAt = Instant.now();
 
     @Enumerated(EnumType.STRING)
-    private InvoiceStatus status = InvoiceStatus.PENDING;
+    private InvoiceStatus status = InvoiceStatus.RECEIVED;
 
     @Column(length = 2048)
     private String dgiResponse;

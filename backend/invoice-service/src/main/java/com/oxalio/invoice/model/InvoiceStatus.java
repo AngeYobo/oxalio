@@ -1,9 +1,8 @@
 package com.oxalio.invoice.model;
 
 public enum InvoiceStatus {
-    PENDING,
-    VALIDATED,
-    REJECTED,
-    ERROR,
-    MOCK_READY
+    RECEIVED,            // créée côté système
+    SUBMITTED_TO_DGI,    // certifiée (mock ou réel)
+    REJECTED,            // refusée par DGI
+    CANCELLED            // annulée
 }

@@ -24,3 +24,6 @@ __pycache__/
 Thumbs.db
 pom.xml.versionsBackup
 frontend/.env*
+
+# rapports de couverture locaux
+backend/invoice-service/src/main/resources/static/coverage/

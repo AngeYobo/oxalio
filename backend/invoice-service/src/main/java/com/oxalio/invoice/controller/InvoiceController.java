@@ -61,7 +61,7 @@ public class InvoiceController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Récupérer une facture par ID", description = "Récupère les détails d'une facture spécifique")
-    public ResponseEntity<InvoiceResponse> getInvoiceById(@PathVariable Long id) {
+    public ResponseEntity<InvoiceResponse> getInvoiceById(@PathVariable("id") Long id) {
         log.info("Récupération de la facture avec ID : {}", id);
         InvoiceResponse response = invoiceService.getInvoiceById(id);
         return ResponseEntity.ok(response);
@@ -69,7 +69,7 @@ public class InvoiceController {
 
     @GetMapping("/number/{invoiceNumber}")
     @Operation(summary = "Récupérer une facture par numéro", description = "Récupère les détails d'une facture par son numéro unique")
-    public ResponseEntity<InvoiceResponse> getInvoiceByNumber(@PathVariable String invoiceNumber) {
+    public ResponseEntity<InvoiceResponse> getInvoiceByNumber(@PathVariable("invoiceNumber") String invoiceNumber) {
         log.info("Récupération de la facture numéro : {}", invoiceNumber);
         InvoiceResponse response = invoiceService.getInvoiceByNumber(invoiceNumber);
         return ResponseEntity.ok(response);
@@ -78,7 +78,7 @@ public class InvoiceController {
     @PutMapping("/{id}")
     @Operation(summary = "Mettre à jour une facture", description = "Met à jour les données d'une facture existante")
     public ResponseEntity<InvoiceResponse> updateInvoice(
-            @PathVariable Long id,
+            @PathVariable("id") Long id,
             @Valid @RequestBody InvoiceRequest request) {
         log.info("Mise à jour de la facture avec ID : {}", id);
         InvoiceResponse response = invoiceService.updateInvoice(id, request);
@@ -88,7 +88,7 @@ public class InvoiceController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Supprimer une facture", description = "Supprime une facture du système")
-    public ResponseEntity<Void> deleteInvoice(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteInvoice(@PathVariable("id") Long id) {
         log.info("Suppression de la facture avec ID : {}", id);
         invoiceService.deleteInvoice(id);
         log.info("Facture supprimée avec succès");
@@ -97,7 +97,7 @@ public class InvoiceController {
 
     @PostMapping("/{id}/submit-to-dgi")
     @Operation(summary = "Soumettre une facture à la DGI", description = "Soumet une facture au système FNE de la DGI et récupère la référence")
-    public ResponseEntity<InvoiceResponse> submitToDgi(@PathVariable Long id) {
+    public ResponseEntity<InvoiceResponse> submitToDgi(@PathVariable("id") Long id) {
         log.info("Soumission de la facture {} à la DGI", id);
         InvoiceResponse response = invoiceService.submitToDgi(id);
         log.info("Facture soumise avec succès. Référence DGI : {}", response.getDgiReference());
