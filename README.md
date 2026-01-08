@@ -9,7 +9,7 @@ Plateforme modulaire conforme FNE (DGI CI). Cette distribution est optimisée po
   - invoice-service (Spring Boot)
   - integration-service (Spring Boot, client DGI, mTLS + retry)
   - common (lib partagée)
-- frontend (React + TypeScript + Vite) — login simulé + liste de factures
+- frontend (React + TypeScript + Vite) - login simulé + liste de factures
 - infra (k8s manifests + terraform local)
 - scripts (build / deploy / port-forward)
 - docs (architecture + OpenAPI)
