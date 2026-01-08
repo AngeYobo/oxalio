@@ -1,4 +1,4 @@
-# Oxalio Platform — FNE Côte d’Ivoire (Local/Demeter)
+# Oxalio Platform - FNE CI (Local/Demeter)
 
 Plateforme modulaire conforme FNE (DGI CI). Cette distribution est optimisée pour **k3s/minikube** (Demeter).
 
