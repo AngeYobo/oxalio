@@ -44,7 +44,7 @@ spring:
           predicates:
             - Path=/api/v1/invoices/**
           filters:
-            - StripPrefix=3
+            - StripPrefix=0
 
         - id: integration-service
           uri: http://localhost:8083

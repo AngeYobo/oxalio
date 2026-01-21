@@ -7,7 +7,8 @@
     "dev": "vite --port 3000 --strictPort --host",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.5",

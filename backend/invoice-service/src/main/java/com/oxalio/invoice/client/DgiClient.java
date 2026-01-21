@@ -1,112 +1,41 @@
+// src/main/java/com/oxalio/invoice/client/DgiClient.java
 package com.oxalio.invoice.client;
 
 import com.oxalio.invoice.dto.InvoiceRequest;
 import com.oxalio.invoice.dto.InvoiceResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
-import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpStatusCodeException;
-import org.springframework.web.client.ResourceAccessException;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import com.oxalio.invoice.mapper.InvoiceDgiMapper;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
-import jakarta.annotation.PostConstruct;
-
-/**
- * Client DGI — envoi des factures vers l’API FNE (mock, sandbox ou prod selon profil).
- */
-@Service
+@Slf4j
+@Component
+@RequiredArgsConstructor
 public class DgiClient {
 
-    private static final Logger log = LoggerFactory.getLogger(DgiClient.class);
+    private final InvoiceDgiMapper dgiMapper;
 
-    private final RestTemplate restTemplate;
+    public InvoiceResponse submit(InvoiceRequest request) {
+        // Construire le payload attendu par la DGI
+        var payload = dgiMapper.toDgiPayload(request);
 
-    @Value("${dgi.endpoint}")
-    private String dgiEndpoint;
+        // TODO: appel HTTP réel ici
+        log.info("[MOCK DGI] Soumission payload: type={}, currency={}, paymentMode={}",
+                payload.getInvoiceType(), payload.getCurrency(), payload.getPaymentMode());
 
-    @Value("${dgi.auth-token:}")
-    private String dgiAuthToken;
-
-    @Value("${dgi.timeout-ms:10000}")
-    private int timeoutMs;
-
-    @Value("${spring.profiles.active:default}")
-    private String activeProfile;
-
-    public DgiClient() {
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(10000);
-        factory.setReadTimeout(10000);
-        this.restTemplate = new RestTemplate(factory);
+        // Simuler une réponse "OK"
+        return InvoiceResponse.builder()
+                .status("SUBMITTED_TO_DGI")
+                .dgiReference("DGI-" + java.util.UUID.randomUUID())
+                .stickerId("STKR-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase())
+                .message("Soumission DGI simulée avec succès") // nécessite le champ dans DTO
+                .build();
     }
 
-    @PostConstruct
-    public void init() {
-        log.info("[DGI CLIENT] Profil actif = {}", activeProfile);
-        log.info("[DGI CLIENT] Endpoint configuré = {}", dgiEndpoint);
-        log.info("[DGI CLIENT] Timeout configuré = {} ms", timeoutMs);
-    }
-
-    /**
-     * Envoie une facture formatée au service FNE/DGI et récupère la réponse.
-     */
-    public InvoiceResponse sendInvoice(InvoiceRequest request) {
-        try {
-            log.info("[DGI] Envoi facture {} à {}", request.getInvoiceNumber(), dgiEndpoint);
-
-            // Reconfigurer les timeouts dynamiquement à chaque envoi
-            SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-            factory.setConnectTimeout(timeoutMs);
-            factory.setReadTimeout(timeoutMs);
-            restTemplate.setRequestFactory(factory);
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            if (dgiAuthToken != null && !dgiAuthToken.isBlank()) {
-                headers.setBearerAuth(dgiAuthToken);
-            }
-
-            HttpEntity<InvoiceRequest> entity = new HttpEntity<>(request, headers);
-
-            ResponseEntity<InvoiceResponse> response = restTemplate.exchange(
-                    dgiEndpoint,
-                    HttpMethod.POST,
-                    entity,
-                    InvoiceResponse.class
-            );
-
-            log.info("[DGI] Réponse pour facture {} : HTTP {}",
-                    request.getInvoiceNumber(), response.getStatusCode());
-
-            return response.getBody();
-
-        } catch (HttpStatusCodeException ex) {
-            log.error("[DGI] Erreur HTTP {} — body={}",
-                    ex.getStatusCode(), ex.getResponseBodyAsString());
-            InvoiceResponse error = new InvoiceResponse();
-            error.setStatus("REJECTED");
-            error.setMessage(String.format("Erreur HTTP %s : %s",
-                    ex.getStatusCode(), ex.getResponseBodyAsString()));
-            return error;
-
-        } catch (ResourceAccessException ex) {
-            // Typiquement timeout ou DNS
-            log.error("[DGI] Timeout ou erreur réseau: {}", ex.getMessage());
-            InvoiceResponse error = new InvoiceResponse();
-            error.setStatus("REJECTED");
-            error.setMessage(String.format("Erreur réseau (%s): %s",
-                    activeProfile, ex.getMessage()));
-            return error;
-
-        } catch (Exception ex) {
-            log.error("[DGI] Exception interne: {}", ex.getMessage(), ex);
-            InvoiceResponse error = new InvoiceResponse();
-            error.setStatus("REJECTED");
-            error.setMessage("Exception interne: " + ex.getMessage());
-            return error;
-        }
+    public InvoiceResponse simulateError(String reason) {
+        return InvoiceResponse.builder()
+                .status("ERROR")
+                .message(reason) // nécessite le champ dans DTO
+                .build();
     }
 }

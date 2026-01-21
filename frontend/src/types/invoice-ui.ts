@@ -9,6 +9,8 @@ export interface InvoiceFormLine {
   unitPrice: number;
   vatRate: number;     // ex: 0.18
   discount?: number;   // montant (pas %), optionnel
+  taxType?: string;
+  productCode?: string; // optionnel
 }
 
 export interface InvoiceFormModel {

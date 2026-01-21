@@ -1,5 +1,4 @@
 // frontend/src/pages/invoices.tsx
-
 import React, { useEffect, useState } from 'react'
 import { api } from '../api/client'
 
@@ -8,7 +7,8 @@ type InvoiceRow = {
   status: string
 }
 
-export const Invoices: React.FC = () => {
+// ✅ CHANGER: Retirer 'export' et ajouter 'export default' à la fin
+const Invoices: React.FC = () => {
   const [rows, setRows] = useState<InvoiceRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -67,3 +67,5 @@ export const Invoices: React.FC = () => {
     </div>
   )
 }
+
+export default Invoices;

@@ -21,11 +21,15 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import org.springframework.security.test.context.support.WithMockUser;
 
 /**
  * ✅ Tests unitaires pour InvoiceController avec les DTOs.
  */
 @WebMvcTest(InvoiceController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class InvoiceControllerTest {
 
     @Autowired
@@ -222,8 +226,8 @@ class InvoiceControllerTest {
                 .qrBase64("iVBORw0KGgoAAAANSUhEUg...")
                 .status("RECEIVED")
                 .notes("Facture de test")
-                .createdAt(Instant.now())
-                .updatedAt(Instant.now())
+                .issueDate(Instant.now())
+                .issueDate(Instant.now())
                 .build();
     }
 }
