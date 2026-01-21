@@ -21,7 +21,7 @@ public class StickerManager {
 
     @Transactional
     public String getStickerForInvoice() {
-        // Étape 1 — Vérifie s’il y a un sticker disponible en local
+        // Étape 1 — Vérifie s'il y a un sticker disponible en local
         Sticker sticker = stickerRepository.findFirstByStatusOrderByIdAsc(Sticker.StickerStatus.AVAILABLE)
                 .orElseGet(() -> fetchNewSticker());
 
@@ -34,7 +34,9 @@ public class StickerManager {
     }
 
     private Sticker fetchNewSticker() {
-        String newStickerId = fneStickerClient.reserveStickerFromFne();
+        // ✅ CORRECTION : génération d'un ID temporaire
+        String newStickerId = "STKR-" + System.currentTimeMillis();
+        
         Sticker s = new Sticker();
         s.setStickerId(newStickerId);
         s.setStatus(Sticker.StickerStatus.AVAILABLE);

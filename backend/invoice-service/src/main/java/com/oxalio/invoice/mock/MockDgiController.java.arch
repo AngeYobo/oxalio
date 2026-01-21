@@ -1,0 +1,394 @@
+package com.oxalio.invoice.mock;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
+
+/**
+ * Mock Controller pour simuler l'API FNE de la DGI
+ * Basé sur la spécification officielle: "PROCEDURE D'INTERFACAGE DES ENTREPRISES PAR API"
+ * 
+ * URL Test: http://localhost:8082/ws
+ * Endpoints:
+ *  - POST /external/invoices/sign (certification de facture)
+ *  - POST /external/invoices/{id}/refund (certification d'avoir)
+ *  - GET /mock/fne/ping (health check)
+ */
+@RestController
+@RequestMapping("/mock/fne")
+public class MockFneController {
+
+    private static final AtomicInteger invoiceCounter = new AtomicInteger(1);
+    private static final String TEST_NCC = "9606123E";
+    
+    /**
+     * Health check endpoint
+     */
+    @GetMapping("/ping")
+    public ResponseEntity<PingResponse> ping() {
+        return ResponseEntity.ok(
+            PingResponse.builder()
+                .status("UP")
+                .message("Mock FNE API is running")
+                .timestamp(Instant.now())
+                .build()
+        );
+    }
+
+    /**
+     * Certification de facture (vente ou bordereau d'achat)
+     * POST /ws/external/invoices/sign
+     */
+    @PostMapping("/external/invoices/sign")
+    public ResponseEntity<?> signInvoice(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @RequestBody InvoiceSignRequest request) {
+        
+        // Validation de l'authentification
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ErrorResponse.builder()
+                    .message("Invalid API Key")
+                    .error("unauthorized_exception")
+                    .statusCode(401)
+                    .build());
+        }
+
+        // Validation des données
+        ValidationResult validation = validateInvoiceRequest(request);
+        if (!validation.isValid()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponse.builder()
+                    .message(validation.getMessage())
+                    .error("bad_request")
+                    .statusCode(400)
+                    .build());
+        }
+
+        // Génération de la réponse de certification
+        String invoiceId = UUID.randomUUID().toString();
+        String reference = generateReference(request.getInvoiceType());
+        String token = generateVerificationUrl(invoiceId);
+        
+        InvoiceSignResponse response = InvoiceSignResponse.builder()
+            .ncc(TEST_NCC)
+            .reference(reference)
+            .token(token)
+            .warning(false)
+            .balanceSticker(179)
+            .invoice(buildInvoiceDetails(invoiceId, reference, token, request))
+            .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Certification de facture d'avoir
+     * POST /ws/external/invoices/{id}/refund
+     */
+    @PostMapping("/external/invoices/{id}/refund")
+    public ResponseEntity<?> refundInvoice(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @PathVariable String id,
+            @RequestBody RefundRequest request) {
+        
+        // Validation de l'authentification
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ErrorResponse.builder()
+                    .message("Unauthorized")
+                    .error("unauthorized_exception")
+                    .statusCode(401)
+                    .build());
+        }
+
+        // Validation des items
+        if (request.getItems() == null || request.getItems().isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponse.builder()
+                    .message("Items cannot be empty")
+                    .error("bad_request")
+                    .statusCode(400)
+                    .build());
+        }
+
+        // Génération de la réponse d'avoir
+        String refundId = UUID.randomUUID().toString();
+        String reference = "A" + generateReference("sale");
+        String token = generateVerificationUrl(refundId);
+        
+        RefundResponse response = RefundResponse.builder()
+            .ncc(TEST_NCC)
+            .reference(reference)
+            .token(token)
+            .warning(false)
+            .balanceSticker(178)
+            .build();
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    // ============ Helper Methods ============
+
+    private ValidationResult validateInvoiceRequest(InvoiceSignRequest request) {
+        if (request.getInvoiceType() == null) {
+            return ValidationResult.invalid("Invoice type is required");
+        }
+        if (request.getPaymentMethod() == null) {
+            return ValidationResult.invalid("Payment method is required");
+        }
+        if (request.getTemplate() == null) {
+            return ValidationResult.invalid("Template is required");
+        }
+        if (request.getPointOfSale() == null) {
+            return ValidationResult.invalid("Point of sale is not valid");
+        }
+        if (request.getItems() == null || request.getItems().isEmpty()) {
+            return ValidationResult.invalid("Items cannot be empty");
+        }
+        
+        // Validation pour B2B
+        if ("B2B".equals(request.getTemplate()) && request.getClientNcc() == null) {
+            return ValidationResult.invalid("Client NCC is required for B2B template");
+        }
+        
+        // Validation pour RNE
+        if (Boolean.TRUE.equals(request.getIsRne()) && request.getRne() == null) {
+            return ValidationResult.invalid("RNE number is required when isRne is true");
+        }
+        
+        return ValidationResult.valid();
+    }
+
+    private String generateReference(String invoiceType) {
+        int number = invoiceCounter.getAndIncrement();
+        return String.format("%s25%09d", TEST_NCC, number);
+    }
+
+    private String generateVerificationUrl(String invoiceId) {
+        return String.format("http://54.247.95.108/fr/verification/%s", invoiceId);
+    }
+
+    private InvoiceDetails buildInvoiceDetails(String id, String reference, String token, InvoiceSignRequest request) {
+        return InvoiceDetails.builder()
+            .id(id)
+            .token(token.substring(token.lastIndexOf('/') + 1))
+            .reference(reference)
+            .type("invoice")
+            .subtype("normal")
+            .date(Instant.now())
+            .paymentMethod(request.getPaymentMethod())
+            .clientCompanyName(request.getClientCompanyName())
+            .clientPhone(request.getClientPhone())
+            .clientEmail(request.getClientEmail())
+            .clientNcc(request.getClientNcc())
+            .clientSellerName(request.getClientSellerName())
+            .clientEstablishment(request.getEstablishment())
+            .clientPointOfSale(request.getPointOfSale())
+            .template(request.getTemplate())
+            .description(request.getCommercialMessage())
+            .commercialMessage(request.getCommercialMessage())
+            .footer(request.getFooter())
+            .foreignCurrency(request.getForeignCurrency())
+            .foreignCurrencyRate(request.getForeignCurrencyRate())
+            .isRne(request.getIsRne())
+            .rne(request.getRne())
+            .status("paid")
+            .source("api")
+            .createdAt(Instant.now())
+            .updatedAt(Instant.now())
+            .items(request.getItems())
+            .build();
+    }
+
+    // ============ DTOs ============
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class PingResponse {
+        private String status;
+        private String message;
+        private Instant timestamp;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class InvoiceSignRequest {
+        private String invoiceType;
+        private String paymentMethod;
+        private String template;
+        private Boolean isRne;
+        private String rne;
+        private String clientNcc;
+        private String clientCompanyName;
+        private String clientPhone;
+        private String clientEmail;
+        private String clientSellerName;
+        private String pointOfSale;
+        private String establishment;
+        private String commercialMessage;
+        private String footer;
+        private String foreignCurrency;
+        private Double foreignCurrencyRate;
+        private List<InvoiceItem> items;
+        private List<CustomTax> customTaxes;
+        private Double discount;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class InvoiceItem {
+        private String id;
+        private List<String> taxes;
+        private List<CustomTax> customTaxes;
+        private String reference;
+        private String description;
+        private Double quantity;
+        private Double amount;
+        private Double discount;
+        private String measurementUnit;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class CustomTax {
+        private String id;
+        private String name;
+        private Double amount;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class InvoiceSignResponse {
+        private String ncc;
+        private String reference;
+        private String token;
+        private Boolean warning;
+        private Integer balanceSticker;
+        private InvoiceDetails invoice;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class InvoiceDetails {
+        private String id;
+        private String parentId;
+        private String parentReference;
+        private String token;
+        private String reference;
+        private String type;
+        private String subtype;
+        private Instant date;
+        private String paymentMethod;
+        private Double amount;
+        private Double vatAmount;
+        private Double fiscalStamp;
+        private Double discount;
+        private String clientNcc;
+        private String clientCompanyName;
+        private String clientPhone;
+        private String clientEmail;
+        private String clientTerminal;
+        private String clientMerchantName;
+        private String clientRccm;
+        private String clientSellerName;
+        private String clientEstablishment;
+        private String clientPointOfSale;
+        private String status;
+        private String template;
+        private String description;
+        private String footer;
+        private String commercialMessage;
+        private String foreignCurrency;
+        private Double foreignCurrencyRate;
+        private Boolean isRne;
+        private String rne;
+        private String source;
+        private Instant createdAt;
+        private Instant updatedAt;
+        private List<InvoiceItem> items;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class RefundRequest {
+        private List<RefundItem> items;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class RefundItem {
+        private String id;
+        private Double quantity;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class RefundResponse {
+        private String ncc;
+        private String reference;
+        private String token;
+        private Boolean warning;
+        private Integer balanceSticker;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class ErrorResponse {
+        private String message;
+        private String error;
+        private Integer statusCode;
+        private List<String> errors;
+    }
+
+    @Data
+    @AllArgsConstructor
+    private static class ValidationResult {
+        private boolean valid;
+        private String message;
+        
+        static ValidationResult valid() {
+            return new ValidationResult(true, null);
+        }
+        
+        static ValidationResult invalid(String message) {
+            return new ValidationResult(false, message);
+        }
+    }
+}

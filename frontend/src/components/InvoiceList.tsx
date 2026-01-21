@@ -1,6 +1,8 @@
+// src/components/InvoiceList.tsx
+
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, FileText, Download, Eye, Trash2, Send } from 'lucide-react';
-import { InvoiceResponse, InvoiceStatus } from '../types/invoice';
+import { InvoiceResponse } from '../types/invoice-types';
 import { invoiceService } from '../services/invoiceService';
 
 const InvoiceList: React.FC = () => {
@@ -51,16 +53,19 @@ const InvoiceList: React.FC = () => {
     }
   };
 
+  const needle = searchTerm.toLowerCase();
+
   const filteredInvoices = invoices.filter(invoice => {
-    const matchesSearch = 
-      invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invoice.buyer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invoice.seller.companyName.toLowerCase().includes(searchTerm.toLowerCase());
-    
+    const matchesSearch =
+      (invoice.invoiceNumber ?? '').toLowerCase().includes(needle) ||
+      invoice.buyer.name.toLowerCase().includes(needle) ||
+      invoice.seller.companyName.toLowerCase().includes(needle);
+
     const matchesStatus = statusFilter === 'ALL' || invoice.status === statusFilter;
-    
+
     return matchesSearch && matchesStatus;
   });
+
 
   const getStatusBadge = (status: string) => {
     const styles = {

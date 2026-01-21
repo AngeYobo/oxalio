@@ -29,4 +29,8 @@ public class SellerDTO {
 
     @Pattern(regexp = "^\\+?[0-9]{8,15}$", message = "Format de téléphone invalide")
     private String phone;
+
+    // 🔥 Nouveaux champs validés
+    private String sellerDisplayName; // Nom du vendeur visible dans la facture
+    private String pointOfSaleName;   // Nom du PDV
 }

@@ -126,6 +126,24 @@
         <scope>runtime</scope>
     </dependency>
 
+    <dependency>
+        <groupId>org.apache.pdfbox</groupId>
+        <artifactId>pdfbox</artifactId>
+        <version>2.0.30</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+
   </dependencies>
 
   <build>
@@ -153,24 +171,30 @@
           <compilerArgs>
             <arg>-parameters</arg>
           </compilerArgs>
+          
+          <!-- ✅ ORDRE CRITIQUE : Lombok AVANT MapStruct -->
           <annotationProcessorPaths>
-          <path>
-            <groupId>org.mapstruct</groupId>
-            <artifactId>mapstruct-processor</artifactId>
-            <version>1.5.5.Final</version>
-          </path>
-          <path>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <version>1.18.32</version>
-          </path>
-          <path>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok-mapstruct-binding</artifactId>
-            <version>0.2.0</version>
-          </path>
-        </annotationProcessorPaths>
-
+            <!-- 1️⃣ Lombok EN PREMIER (génère getters/setters) -->
+            <path>
+              <groupId>org.projectlombok</groupId>
+              <artifactId>lombok</artifactId>
+              <version>1.18.32</version>
+            </path>
+            
+            <!-- 2️⃣ Binding Lombok-MapStruct (nécessaire pour compatibilité) -->
+            <path>
+              <groupId>org.projectlombok</groupId>
+              <artifactId>lombok-mapstruct-binding</artifactId>
+              <version>0.2.0</version>
+            </path>
+            
+            <!-- 3️⃣ MapStruct EN DERNIER (utilise les méthodes générées par Lombok) -->
+            <path>
+              <groupId>org.mapstruct</groupId>
+              <artifactId>mapstruct-processor</artifactId>
+              <version>1.5.5.Final</version>
+            </path>
+          </annotationProcessorPaths>
         </configuration>
       </plugin>
 

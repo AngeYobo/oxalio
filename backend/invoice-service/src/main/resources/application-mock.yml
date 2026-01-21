@@ -1,9 +1,96 @@
+# resources/application-mock.yml
 spring:
   config:
     activate:
       on-profile: mock
 
+  # CORS
+  web:
+    cors:
+      allowed-origins:
+        - http://localhost:5173
+        - http://localhost:3000
+      allowed-methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      allowed-headers: "*"
+      allow-credentials: true
+      max-age: 3600
+
+  # Flyway (Option A: migrations H2 + common)
+  flyway:
+    enabled: true
+    locations:
+      - classpath:db/migration/h2
+      - classpath:db/migration/common
+
+oxalio:
+  invoice:
+    logo-base-dir: ./seller-logos
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+
 dgi:
-  endpoint: "http://localhost:8082/mock-dgi"
+  mock: true
+  endpoint: "http://localhost:8082/ws"
   auth-token: DGI_MOCK_TOKEN
   timeout-ms: 15000
+
+logging:
+  level:
+    com.oxalio.invoice: DEBUG
+    org.springframework.web: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.web.servlet.DispatcherServlet: DEBUG
+    org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping: TRACE
+    org.springframework.security: DEBUG
+
+server:
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-exception: true
+    include-stacktrace: always
+
+app:
+  errors:
+    show-details: true
+
+# ════════════════════════════════════════════════════════════════
+# CONFIGURATION FNE
+# ════════════════════════════════════════════════════════════════
+fne:
+  api:
+    base-url: http://54.247.95.108/ws
+    timeout: 30000
+
+  auth:
+    api-key: 2ldYNKrVkqZTKVTk6z5NSftR3Rwum7Tn
+
+  establishment:
+    name: "OXALIO"
+    point-of-sale: "OXALIO"
+
+  company:
+    ncc: "2505842N"
+    name: "OXALIO SARL"
+    email: "oxalio15@gmail.com"
+    phone: "0708703415"
+    address: "Bouaké Commerce 01 BP 946 Bouaké 1"
+    tax-regime: "TEE"
+
+  retry:
+    max-attempts: 3
+    initial-interval: 2000
+    multiplier: 2.0
+    max-interval: 10000

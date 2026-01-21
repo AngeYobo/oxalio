@@ -1,0 +1,552 @@
+/**
+ * Invoice Types - Version Complète
+ * OXALIO FNE - Frontend
+ * 
+ * Types TypeScript pour les factures et l'intégration FNE
+ * Inclut tous les types pour la compatibilité avec les composants existants
+ */
+
+// ========================================
+// Enums
+// ========================================
+
+export enum InvoiceStatus {
+  DRAFT = 'draft',
+  CERTIFIED = 'certified',
+  PAID = 'paid',
+  CANCELLED = 'cancelled',
+}
+
+export enum InvoiceType {
+  SALE = 'sale',
+  PURCHASE = 'purchase',
+}
+
+export enum InvoiceTemplate {
+  B2B = 'B2B',
+  B2C = 'B2C',
+  B2F = 'B2F',
+  B2G = 'B2G',
+}
+
+export enum PaymentMethod {
+  CASH = 'cash',
+  CARD = 'card',
+  CHECK = 'check',
+  MOBILE_MONEY = 'mobile-money',
+  TRANSFER = 'transfer',
+  DEFERRED = 'deferred',
+}
+
+export enum TaxType {
+  TVA = 'TVA',           // TVA normale 18%
+  TVAB = 'TVAB',         // TVA réduite 9%
+  TVAC = 'TVAC',         // TVA exonération conventionnelle 0%
+  TVAD = 'TVAD',         // TVA exonération légale 0%
+}
+
+export enum UserRole {
+  ADMIN = 'admin',
+  USER = 'user',
+  ACCOUNTANT = 'accountant',
+}
+
+// ========================================
+// Interfaces de base
+// ========================================
+
+export interface BaseEntity {
+  id: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface User extends BaseEntity {
+  email: string;
+  name: string;
+  role: UserRole;
+  
+  // Entreprise
+  companyName: string;
+  companyNcc: string;
+  
+  // Optionnel
+  phone?: string;
+  avatar?: string;
+  
+  // Méta
+  lastLoginAt?: string;
+  isActive: boolean;
+}
+
+// ========================================
+// Invoice (Types principaux)
+// ========================================
+
+export interface Invoice extends BaseEntity {
+  // Référence locale
+  invoiceNumber?: string;
+  orderId?: number;
+  
+  // Client
+  clientName: string;
+  clientNcc?: string;
+  clientPhone?: string;
+  clientEmail?: string;
+  clientAddress?: string;
+  
+  // Type et template
+  invoiceType: InvoiceType;
+  template: InvoiceTemplate;
+  paymentMethod: PaymentMethod;
+  
+  // Montants
+  subtotal: number;           // Total HT
+  discountAmount: number;     // Montant remise
+  taxAmount: number;          // Montant TVA
+  totalAmount: number;        // Total TTC
+  
+  // Statut
+  status: InvoiceStatus;
+  
+  // RNE
+  isRne: boolean;
+  rne?: string;
+  
+  // Champs optionnels
+  notes?: string;
+  terms?: string;
+  
+  // FNE - Informations de certification
+  fneReference?: string;
+  fneInvoiceId?: string;
+  fneToken?: string;
+  fneQrCode?: string;
+  fneCertifiedAt?: string;
+  fneBalanceSticker?: number;
+  
+  // Relations
+  items: InvoiceItem[];
+  user?: User;
+}
+
+export interface InvoiceItem extends BaseEntity {
+  invoiceId: number;
+  
+  // Produit/Service
+  reference?: string;
+  description: string;
+  measurementUnit?: string;
+  
+  // Quantité et prix
+  quantity: number;
+  unitPrice: number;          // Prix unitaire HT
+  
+  // Remise
+  discountPercent: number;
+  discountAmount: number;
+  
+  // Montants
+  subtotal: number;           // Prix * Quantité
+  subtotalAfterDiscount: number;
+  taxAmount: number;
+  totalAmount: number;
+  
+  // Taxes
+  taxType: TaxType;
+  taxRate: number;
+  customTaxes?: CustomTax[];
+}
+
+export interface CustomTax {
+  name: string;
+  rate: number;               // En pourcentage
+  amount: number;             // Montant calculé
+}
+
+// ========================================
+// Types pour les composants existants
+// ========================================
+
+/**
+ * Type pour CreateInvoice.tsx
+ * (format simplifié pour le formulaire)
+ */
+export interface InvoiceRequest {
+  clientName: string;
+  clientNcc?: string;
+  clientPhone?: string;
+  clientEmail?: string;
+  invoiceType: string;
+  template: string;
+  paymentMethod: string;
+  isRne: boolean;
+  rne?: string;
+  lines: InvoiceLineDTO[];
+  notes?: string;
+  terms?: string;
+}
+
+/**
+ * Type pour les lignes de facture dans CreateInvoice.tsx
+ */
+export interface InvoiceLineDTO {
+  reference?: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  taxType: string;
+  discountPercent?: number;
+  measurementUnit?: string;
+}
+
+/**
+ * Type pour InvoiceList.tsx et InvoiceDetail.tsx
+ * (réponse de l'API avec tous les champs)
+ */
+export interface InvoiceResponse {
+  id: number;
+  invoiceNumber?: string;
+  orderId?: number;
+  
+  // Client
+  clientName: string;
+  clientNcc?: string;
+  clientPhone?: string;
+  clientEmail?: string;
+  clientAddress?: string;
+  
+  // Type et template
+  invoiceType: string;
+  template: string;
+  paymentMethod: string;
+  
+  // Montants
+  subtotal: number;
+  discountAmount: number;
+  taxAmount: number;
+  totalAmount: number;
+  
+  // Statut
+  status: string;
+  
+  // RNE
+  isRne: boolean;
+  rne?: string;
+  
+  // Champs optionnels
+  notes?: string;
+  terms?: string;
+  
+  // FNE / DGI - Informations de certification (nouveaux noms)
+  fneReference?: string;
+  fneInvoiceId?: string;
+  fneToken?: string;
+  fneQrCode?: string;
+  fneCertifiedAt?: string;
+  fneBalanceSticker?: number;
+  
+  // Anciens noms (compatibilité rétroactive)
+  dgiReference?: string;      // Alias pour fneReference
+  qrBase64?: string;           // Alias pour fneQrCode
+  dgiSubmittedAt?: string;     // Alias pour fneCertifiedAt
+  
+  // Dates
+  createdAt: string;
+  updatedAt: string;
+  
+  // Relations
+  lines?: InvoiceLineDTO[];
+  items?: InvoiceLineDTO[];
+}
+
+// ========================================
+// DTOs (Data Transfer Objects)
+// ========================================
+
+export interface CreateInvoiceDTO {
+  // Type
+  invoiceType: InvoiceType;
+  template: InvoiceTemplate;
+  paymentMethod: PaymentMethod;
+  
+  // Client
+  clientName: string;
+  clientNcc?: string;
+  clientPhone?: string;
+  clientEmail?: string;
+  clientAddress?: string;
+  
+  // RNE
+  isRne: boolean;
+  rne?: string;
+  
+  // Articles
+  items: CreateInvoiceItemDTO[];
+  
+  // Optionnel
+  notes?: string;
+  terms?: string;
+  discountPercent?: number;
+}
+
+export interface CreateInvoiceItemDTO {
+  reference?: string;
+  description: string;
+  measurementUnit?: string;
+  quantity: number;
+  unitPrice: number;
+  taxType: TaxType;
+  discountPercent?: number;
+  customTaxes?: CustomTax[];
+}
+
+export interface UpdateInvoiceDTO {
+  clientName?: string;
+  clientPhone?: string;
+  clientEmail?: string;
+  status?: InvoiceStatus;
+  notes?: string;
+  terms?: string;
+}
+
+// ========================================
+// FNE Specific Types
+// ========================================
+
+export interface FneInvoiceRequest {
+  invoiceType: InvoiceType;
+  template: InvoiceTemplate;
+  paymentMethod: PaymentMethod;
+  
+  isRne: boolean;
+  rne?: string | null;
+  
+  clientNcc?: string;
+  clientCompanyName: string;
+  clientPhone: string;
+  clientEmail: string;
+  
+  clientSellerName?: string;
+  commercialMessage?: string;
+  footer?: string;
+  
+  foreignCurrency?: string;
+  foreignCurrencyRate?: number;
+  
+  items: FneInvoiceItemRequest[];
+  discount?: number;
+}
+
+export interface FneInvoiceItemRequest {
+  reference?: string;
+  description: string;
+  quantity: number;
+  amount: number;
+  taxes: TaxType[];
+  customTaxes?: CustomTax[];
+  discount?: number;
+  measurementUnit?: string;
+}
+
+export interface FneInvoiceResponse {
+  ncc: string;
+  reference: string;
+  token: string;
+  qrCode?: string;
+  warning: boolean;
+  balanceSticker: number;
+  invoice: FneInvoiceDetails;
+}
+
+export interface FneInvoiceDetails {
+  id: string;
+  reference: string;
+  type: 'invoice' | 'refund';
+  date: string;
+  amount: number;
+  vatAmount: number;
+  status: string;
+  template: InvoiceTemplate;
+}
+
+// ========================================
+// Stats et Analytics
+// ========================================
+
+export interface InvoiceStats {
+  // Compteurs
+  total: number;
+  draft: number;
+  certified: number;
+  paid: number;
+  cancelled: number;
+  
+  // Montants
+  totalAmount: number;
+  totalVat: number;
+  averageAmount: number;
+  
+  // Par période
+  thisMonth: number;
+  lastMonth: number;
+  thisYear: number;
+  
+  // Croissance
+  growthRate: number;         // En pourcentage
+}
+
+export interface RevenueByMonth {
+  month: string;              // Format: YYYY-MM
+  revenue: number;
+  count: number;
+}
+
+export interface RevenueByTemplate {
+  template: InvoiceTemplate;
+  revenue: number;
+  count: number;
+  percentage: number;
+}
+
+export interface TopClient {
+  clientName: string;
+  clientNcc?: string;
+  totalRevenue: number;
+  invoiceCount: number;
+}
+
+// ========================================
+// Filters et Pagination
+// ========================================
+
+export interface InvoiceFilters {
+  status?: InvoiceStatus;
+  template?: InvoiceTemplate;
+  startDate?: string;
+  endDate?: string;
+  clientName?: string;
+  fneReference?: string;
+  minAmount?: number;
+  maxAmount?: number;
+  search?: string;
+}
+
+export interface PaginationParams {
+  page: number;
+  limit: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+}
+
+// ========================================
+// UI State Types
+// ========================================
+
+export interface InvoiceFormState {
+  step: number;
+  isSubmitting: boolean;
+  errors: Record<string, string>;
+  touchedFields: Set<string>;
+}
+
+export interface InvoiceTableState {
+  selectedIds: number[];
+  filters: InvoiceFilters;
+  pagination: PaginationParams;
+  sortColumn: string | null;
+  sortDirection: 'asc' | 'desc';
+}
+
+// ========================================
+// API Response Types
+// ========================================
+
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+}
+
+export interface ApiError {
+  success: false;
+  message: string;
+  errors?: Record<string, string[]>;
+  code?: string;
+  status?: number;
+}
+
+// ========================================
+// Constants
+// ========================================
+
+export const INVOICE_STATUS_LABELS: Record<InvoiceStatus, string> = {
+  [InvoiceStatus.DRAFT]: 'Brouillon',
+  [InvoiceStatus.CERTIFIED]: 'Certifiée',
+  [InvoiceStatus.PAID]: 'Payée',
+  [InvoiceStatus.CANCELLED]: 'Annulée',
+};
+
+export const INVOICE_TEMPLATE_LABELS: Record<InvoiceTemplate, string> = {
+  [InvoiceTemplate.B2B]: 'Entreprise (B2B)',
+  [InvoiceTemplate.B2C]: 'Particulier (B2C)',
+  [InvoiceTemplate.B2F]: 'Export (B2F)',
+  [InvoiceTemplate.B2G]: 'État (B2G)',
+};
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  [PaymentMethod.CASH]: 'Espèces',
+  [PaymentMethod.CARD]: 'Carte bancaire',
+  [PaymentMethod.CHECK]: 'Chèque',
+  [PaymentMethod.MOBILE_MONEY]: 'Mobile Money',
+  [PaymentMethod.TRANSFER]: 'Virement',
+  [PaymentMethod.DEFERRED]: 'À terme',
+};
+
+export const TAX_TYPE_LABELS: Record<TaxType, string> = {
+  [TaxType.TVA]: 'TVA 18%',
+  [TaxType.TVAB]: 'TVA 9%',
+  [TaxType.TVAC]: 'TVA 0% (Exo. Conv.)',
+  [TaxType.TVAD]: 'TVA 0% (Exo. Lég.)',
+};
+
+export const TAX_RATES: Record<TaxType, number> = {
+  [TaxType.TVA]: 0.18,
+  [TaxType.TVAB]: 0.09,
+  [TaxType.TVAC]: 0.00,
+  [TaxType.TVAD]: 0.00,
+};
+
+// ========================================
+// Type Guards
+// ========================================
+
+export const isInvoice = (obj: any): obj is Invoice => {
+  return (
+    obj &&
+    typeof obj.id === 'number' &&
+    typeof obj.clientName === 'string' &&
+    typeof obj.totalAmount === 'number'
+  );
+};
+
+export const isInvoiceItem = (obj: any): obj is InvoiceItem => {
+  return (
+    obj &&
+    typeof obj.description === 'string' &&
+    typeof obj.quantity === 'number' &&
+    typeof obj.unitPrice === 'number'
+  );
+};
