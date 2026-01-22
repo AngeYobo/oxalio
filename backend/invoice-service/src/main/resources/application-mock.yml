@@ -75,7 +75,7 @@ fne:
     timeout: 30000
 
   auth:
-    api-key: 2ldYNKrVkqZTKVTk6z5NSftR3Rwum7Tn
+    api-key: ${FNE_API_KEY:}
 
   establishment:
     name: "OXALIO"
