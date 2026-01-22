@@ -1,8 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Save } from 'lucide-react';
-import { InvoiceRequest, InvoiceLineDTO } from '../types/invoice';
+import { InvoiceRequest, InvoiceLineDTO, TaxType } from '../types/invoice-types';
 import { invoiceService } from '../services/invoiceService';
+
+// Lis les infos vendeur depuis env ou fallback
+const SELLER_TAX_ID  = import.meta.env.VITE_SELLER_TAX_ID  ?? "CI00000000";
+const SELLER_NAME    = import.meta.env.VITE_SELLER_NAME    ?? "Oxalio SARL";
+const SELLER_ADDRESS = import.meta.env.VITE_SELLER_ADDRESS ?? "Bouaké, Côte d’Ivoire";
+const SELLER_EMAIL   = import.meta.env.VITE_SELLER_EMAIL   ?? ""; // ✅ string
+const SELLER_PHONE   = import.meta.env.VITE_SELLER_PHONE   ?? ""; // ✅ string
+
 
 const CreateInvoice: React.FC = () => {
   const navigate = useNavigate();
@@ -10,14 +18,18 @@ const CreateInvoice: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [formData, setFormData] = useState<InvoiceRequest>({
+    clientName: '',
     invoiceType: 'STANDARD',
+    template: 'B2C',
+    paymentMethod: 'TRANSFER',
+    isRne: false,
     currency: 'XOF',
     seller: {
-      taxId: '',
-      companyName: '',
-      address: '',
-      email: '',
-      phone: ''
+      taxId: SELLER_TAX_ID,
+      companyName: SELLER_NAME,
+      address: SELLER_ADDRESS,
+      email: SELLER_EMAIL,
+      phone: SELLER_PHONE
     },
     buyer: {
       taxId: '',
@@ -30,6 +42,7 @@ const CreateInvoice: React.FC = () => {
       description: '',
       quantity: 1,
       unitPrice: 0,
+      taxType: TaxType.TVA,
       vatRate: 18,
       vatAmount: 0,
       discount: 0,
@@ -44,6 +57,7 @@ const CreateInvoice: React.FC = () => {
     paymentMode: 'TRANSFER',
     notes: ''
   });
+
 
   const calculateLineTotals = (lines: InvoiceLineDTO[]) => {
     let subtotal = 0;
@@ -80,6 +94,7 @@ const CreateInvoice: React.FC = () => {
       description: '',
       quantity: 1,
       unitPrice: 0,
+      taxType: TaxType.TVA,
       vatRate: 18,
       vatAmount: 0,
       discount: 0,

@@ -27,3 +27,35 @@ frontend/.env*
 
 # rapports de couverture locaux
 backend/invoice-service/src/main/resources/static/coverage/
+
+
+# === Oxalio local artifacts (do not commit) ===
+backend/invoice-service/data/
+backend/invoice-service/*.pdf
+backend/invoice-service/*.png
+backend/invoice-service/*.jpg
+backend/invoice-service/*.jpeg
+backend/invoice-service/*.json
+backend/invoice-service/seller-logos/
+backend/invoice-service/seller-logos-upload.sh
+backend/invoice-service/Oxalio-Invoice.postman_collection.json
+backend/invoice-service/test.pdf
+
+# scripts de tests / dossiers de validation (local only)
+scripts/DOSSIER-VALIDATION-FNE-OXALIO-20260120.zip
+scripts/DOSSIER-VALIDATION-FNE-OXALIO/
+scripts/OXALIO-Validation-API-FNE/
+scripts/fne-test-results/
+scripts/specimens-fne-final/
+scripts/specimens-fne/
+scripts/test-seller-variants/
+
+# si tu veux exclure tous tes scripts de test locaux:
+scripts/*.sh
+scripts/**
+
+# doc local (ne pas committer)
+docs/API-1-FNE-VENTE.md
+
+# Postman local
+postman/

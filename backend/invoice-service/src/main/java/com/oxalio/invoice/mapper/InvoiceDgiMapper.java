@@ -1,59 +1,129 @@
+// src/main/java/com/oxalio/invoice/mapper/InvoiceDgiMapper.java
 package com.oxalio.invoice.mapper;
 
 import com.oxalio.invoice.dto.InvoiceRequest;
-import com.oxalio.invoice.model.InvoiceDTO;
-import com.oxalio.invoice.model.SellerDTO;
-import com.oxalio.invoice.model.BuyerDTO;
+import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
+import java.util.List;
 import java.util.stream.Collectors;
 
+@Component
 public class InvoiceDgiMapper {
 
-    public static InvoiceRequest fromInvoiceModel(InvoiceDTO invoice) {
-        InvoiceRequest dto = new InvoiceRequest();
+    /**
+     * Mapping STRICT vers le payload DGI selon les champs réellement présents
+     * dans InvoiceRequest et compatibles avec InvoiceEntity.
+     */
+    public DgiPayload toDgiPayload(InvoiceRequest req) {
+        DgiPayload p = new DgiPayload();
 
-        dto.setInvoiceType(invoice.getInvoiceType());
-        dto.setCurrency(invoice.getCurrency());
-        dto.setPaymentMode(invoice.getPaymentMode());
+        // --- Header ---
+        p.setInvoiceType(req.getInvoiceType());
+        p.setCurrency(req.getCurrency());
+        p.setPaymentMode(req.getPaymentMode());
+        p.setNotes(req.getNotes());
 
-        // ✅ Seller
-        SellerDTO seller = SellerDTO.builder()
-                .taxId(invoice.getSeller().getTaxId())
-                .companyName(invoice.getSeller().getCompanyName())
-                .address(invoice.getSeller().getAddress())
-                .build();
-        dto.setSeller(seller);
+        // --- Seller ---
+        var sReq = req.getSeller();
+        DgiPayload.Seller s = new DgiPayload.Seller();
+        if (sReq != null) {
+            s.setCompanyName(sReq.getCompanyName());
+            s.setTaxId(sReq.getTaxId());
+            s.setAddress(sReq.getAddress());
+            s.setPhone(sReq.getPhone());
+            s.setEmail(sReq.getEmail());
 
-        // ✅ Buyer
-        BuyerDTO buyer = BuyerDTO.builder()
-                .taxId(invoice.getBuyer().getTaxId())
-                .name(invoice.getBuyer().getName())
-                .address(invoice.getBuyer().getAddress())
-                .build();
-        dto.setBuyer(buyer);
+            // 🔥 Champs supplémentaires réellement existants
+            s.setSellerDisplayName(sReq.getSellerDisplayName());
+            s.setPointOfSaleName(sReq.getPointOfSaleName());
+        }
+        p.setSeller(s);
 
-        // ✅ Lines
-        dto.setLines(invoice.getLines().stream().map(l ->
-                InvoiceRequest.InvoiceLineDTO.builder()
-                        .description(l.getDescription())
-                        .quantity(BigDecimal.valueOf(l.getQuantity()))
-                        .unitPrice(BigDecimal.valueOf(l.getUnitPrice()))
-                        .vatRate(BigDecimal.valueOf(l.getVatRate()))
-                        .vatAmount(BigDecimal.valueOf(l.getVatAmount()))
-                        .discount(BigDecimal.valueOf(l.getDiscount()))
-                        .build()
-        ).collect(Collectors.toList()));
+        // --- Buyer ---
+        var bReq = req.getBuyer();
+        DgiPayload.Buyer b = new DgiPayload.Buyer();
+        if (bReq != null) {
+            b.setName(bReq.getName());
+            b.setTaxId(bReq.getTaxId());
+            b.setAddress(bReq.getAddress());
+            b.setPhone(bReq.getPhone());
+            b.setEmail(bReq.getEmail());
+        }
+        p.setBuyer(b);
 
-        // ✅ Totals
-        dto.setTotals(
-                InvoiceRequest.TotalsDTO.builder()
-                        .subtotal(BigDecimal.valueOf(invoice.getTotals().getSubtotal()))
-                        .totalVat(BigDecimal.valueOf(invoice.getTotals().getTotalVat()))
-                        .totalAmount(BigDecimal.valueOf(invoice.getTotals().getTotalAmount()))
-                        .build()
-        );
+        // --- Lines ---
+        List<DgiPayload.Line> lines =
+                req.getLines() == null ? List.of() :
+                        req.getLines().stream().map(l -> {
+                            DgiPayload.Line dl = new DgiPayload.Line();
+                            dl.setDescription(l.getDescription());
+                            dl.setQuantity(l.getQuantity());
+                            dl.setUnitPrice(l.getUnitPrice());
+                            dl.setVatRate(l.getVatRate());
+                            dl.setVatAmount(l.getVatAmount());
+                            dl.setDiscount(l.getDiscount());
+                            dl.setProductCode(l.getProductCode());
 
-        return dto;
+                            // 🔥 Maintenant présents dans InvoiceRequest.InvoiceLineDTO
+                            dl.setSku(l.getSku());
+                            dl.setUnit(l.getUnit());
+
+                            return dl;
+                        }).collect(Collectors.toList());
+
+        p.setLines(lines);
+
+        return p;
+    }
+
+    // ============================================================
+    // INTERNAL PAYLOAD FOR FNE COMMUNICATION
+    // ============================================================
+    @lombok.Data
+    public static class DgiPayload {
+        private String invoiceType;
+        private String currency;
+        private String paymentMode;
+        private String notes;
+
+        private Seller seller;
+        private Buyer buyer;
+        private List<Line> lines;
+
+        @lombok.Data
+        public static class Seller {
+            private String companyName;
+            private String taxId;
+            private String address;
+            private String phone;
+            private String email;
+
+            // 🔥 Champs ajoutés dans SellerDTO
+            private String sellerDisplayName;
+            private String pointOfSaleName;
+        }
+
+        @lombok.Data
+        public static class Buyer {
+            private String name;
+            private String taxId;
+            private String address;
+            private String phone;
+            private String email;
+        }
+
+        @lombok.Data
+        public static class Line {
+            private String description;
+            private java.math.BigDecimal quantity;
+            private java.math.BigDecimal unitPrice;
+            private java.math.BigDecimal vatRate;
+            private java.math.BigDecimal vatAmount;
+            private java.math.BigDecimal discount;
+            private String productCode;
+
+            private String sku;
+            private String unit;
+        }
     }
 }

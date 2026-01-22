@@ -1,3 +1,5 @@
+// src/components/InvoiceTable.tsx
+
 import { useInvoices } from '../hooks/useInvoices';
 import { Link } from 'react-router-dom';
 
@@ -28,9 +30,13 @@ export default function InvoiceTable() {
               <td className="p-2">{inv.amount} {inv.currency}</td>
               <td className="p-2">{inv.status}</td>
               <td className="p-2">
-                <Link to={`/invoice/${encodeURIComponent(inv.id)}`} className="text-blue-600 hover:underline text-sm">
+                <Link
+                  to={`/invoices/${encodeURIComponent(inv.id)}`}
+                  className="text-blue-600 hover:underline text-sm"
+                >
                   Détails
                 </Link>
+
               </td>
             </tr>
           ))}

@@ -12,41 +12,6 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.util.List;
 
-/**
- * DTO de requête pour la création d'une facture.
- *
- * Exemple de payload JSON :
- * {
- *   "invoiceType": "STANDARD",
- *   "currency": "XOF",
- *   "seller": {
- *     "taxId": "CI1234567",
- *     "companyName": "Oxalio SARL",
- *     "address": "Abidjan, Plateau"
- *   },
- *   "buyer": {
- *     "taxId": "CI7654321",
- *     "name": "Client Démo",
- *     "address": "Cocody, Riviera"
- *   },
- *   "lines": [
- *     {
- *       "description": "Produit A",
- *       "quantity": 2,
- *       "unitPrice": 10000,
- *       "vatRate": 18,
- *       "vatAmount": 3600,
- *       "discount": 0
- *     }
- *   ],
- *   "totals": {
- *     "subtotal": 20000,
- *     "totalVat": 3600,
- *     "totalAmount": 23600
- *   },
- *   "paymentMode": "TRANSFER"
- * }
- */
 @Data
 @Builder
 @NoArgsConstructor
@@ -86,21 +51,27 @@ public class InvoiceRequest {
     @Size(max = 500, message = "Les notes ne peuvent excéder 500 caractères")
     private String notes;
 
-    /**
-     * DTO pour une ligne de facture
-     */
     @Data
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
     public static class InvoiceLineDTO {
+
+        /** Référence article (facultatif) */
+        @Size(max = 64, message = "La référence (SKU) ne peut excéder 64 caractères")
+        private String sku;
+
+        /** Unité (facultatif), ex: PCS, KG, L, H… */
+        @Size(max = 16, message = "L'unité ne peut excéder 16 caractères")
+        private String unit;
+
         @NotBlank(message = "La description du produit est obligatoire")
         @Size(min = 3, max = 500, message = "La description doit contenir entre 3 et 500 caractères")
         private String description;
 
         @NotNull(message = "La quantité est obligatoire")
         @DecimalMin(value = "0.01", message = "La quantité doit être supérieure à 0")
-        @Digits(integer = 10, fraction = 2, message = "Format de quantité invalide")
+        @Digits(integer = 10, fraction = 3, message = "Format de quantité invalide") // <-- 3 décimales pour coller au scale=3
         private BigDecimal quantity;
 
         @NotNull(message = "Le prix unitaire est obligatoire")
@@ -128,31 +99,39 @@ public class InvoiceRequest {
         private String productCode;
     }
 
-    /**
-     * DTO pour les totaux de la facture
-     */
     @Data
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
     public static class TotalsDTO {
+
         @NotNull(message = "Le sous-total est obligatoire")
-        @DecimalMin(value = "0.00", message = "Le sous-total doit être positif ou nul")
-        @Digits(integer = 15, fraction = 2, message = "Format de sous-total invalide")
+        @DecimalMin(value = "0.00")
+        @Digits(integer = 15, fraction = 2)
         private BigDecimal subtotal;
 
         @NotNull(message = "Le total de TVA est obligatoire")
-        @DecimalMin(value = "0.00", message = "Le total de TVA doit être positif ou nul")
-        @Digits(integer = 15, fraction = 2, message = "Format de total de TVA invalide")
+        @DecimalMin(value = "0.00")
+        @Digits(integer = 15, fraction = 2)
         private BigDecimal totalVat;
 
         @NotNull(message = "Le montant total est obligatoire")
-        @DecimalMin(value = "0.00", message = "Le montant total doit être positif ou nul")
-        @Digits(integer = 15, fraction = 2, message = "Format de montant total invalide")
+        @DecimalMin(value = "0.00")
+        @Digits(integer = 15, fraction = 2)
         private BigDecimal totalAmount;
 
-        @DecimalMin(value = "0.00", message = "La remise totale doit être positive ou nulle")
-        @Digits(integer = 15, fraction = 2, message = "Format de remise totale invalide")
+        @DecimalMin(value = "0.00")
+        @Digits(integer = 15, fraction = 2)
         private BigDecimal totalDiscount;
+
+        // 🔥 champs manquants (CAUSE DE L'ERREUR)
+        @DecimalMin(value = "0.00")
+        @Digits(integer = 15, fraction = 2)
+        private BigDecimal otherTaxes;
+
+        @DecimalMin(value = "0.00")
+        @Digits(integer = 15, fraction = 2)
+        private BigDecimal totalToPay;
     }
+
 }
