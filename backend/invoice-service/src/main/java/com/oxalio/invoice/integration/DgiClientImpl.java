@@ -4,8 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.oxalio.invoice.config.DgiConfiguration;
 import com.oxalio.invoice.entity.InvoiceEntity;
 import com.oxalio.invoice.entity.InvoiceLineEntity;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
@@ -32,14 +34,21 @@ public class DgiClientImpl {
     private final DgiConfiguration dgiConfig;
     private final ObjectMapper objectMapper;
 
-    @Value("${fne.auth.api-key:}")
-    private String apiKey() {
-        String key = fneConfiguration.getApiKey();
-        if (key == null || key.isBlank()) {
-        throw new IllegalStateException("Missing fne.auth.api-key (set env var FNE_AUTH_API_KEY)");
+    /**
+     * Token Bearer DGI (ou clé d’accès) fourni via config.
+     * Exemple: dgi.auth-token=....
+     */
+    @Value("${dgi.auth-token:}")
+    private String dgiAuthToken;
+
+    @PostConstruct
+    void validateConfig() {
+        if (dgiAuthToken == null || dgiAuthToken.isBlank()) {
+            throw new IllegalStateException("Missing dgi.auth-token (set env var DGI_AUTH_TOKEN or configure in yml)");
         }
-        return key;
-    }
+        if (dgiConfig.getBaseUrl() == null || dgiConfig.getBaseUrl().isBlank()) {
+            throw new IllegalStateException("Missing dgi.base-url");
+        }
     }
 
     public DgiClientMock.DgiCertification submitInvoice(InvoiceEntity invoice) {
@@ -51,7 +60,7 @@ public class DgiClientImpl {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.setAccept(List.of(MediaType.APPLICATION_JSON));
-            headers.setBearerAuth(DGI_BEARER_TOKEN);
+            headers.setBearerAuth(dgiAuthToken);
 
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(dgiPayload, headers);
 
@@ -61,16 +70,16 @@ public class DgiClientImpl {
             log.debug("📦 Payload: {}", objectMapper.writeValueAsString(dgiPayload));
 
             ResponseEntity<Map> response = restTemplate.exchange(
-                url,
-                HttpMethod.POST,
-                request,
-                Map.class
+                    url,
+                    HttpMethod.POST,
+                    request,
+                    Map.class
             );
 
             if (response.getStatusCode().is2xxSuccessful()) {
                 Map<String, Object> body = response.getBody();
                 log.info("✅ [DGI REAL] Facture acceptée par la DGI");
-                
+
                 return parseDgiResponse(body, "INV-" + System.currentTimeMillis());
             } else {
                 log.error("❌ [DGI REAL] Erreur HTTP {} lors de la soumission", response.getStatusCode());
@@ -100,14 +109,14 @@ public class DgiClientImpl {
         payload.put("establishment", invoice.getSellerCompanyName());
         payload.put("pointOfSale", "Point de Vente Principal");
         payload.put("items", buildItems(invoice));
-        
+
         return payload;
     }
 
     private List<Map<String, Object>> buildItems(InvoiceEntity invoice) {
         try {
             List<InvoiceLineEntity> lines = invoice.getLines();
-            
+
             if (lines == null || lines.isEmpty()) {
                 Map<String, Object> defaultItem = new HashMap<>();
                 defaultItem.put("taxes", List.of("TVA"));
@@ -118,15 +127,15 @@ public class DgiClientImpl {
             }
 
             return lines.stream()
-                .map(line -> {
-                    Map<String, Object> item = new HashMap<>();
-                    item.put("taxes", List.of("TVA"));
-                    item.put("description", line.getDescription());
-                    item.put("quantity", line.getQuantity().intValue());
-                    item.put("amount", line.getUnitPrice().multiply(line.getQuantity()).intValue());
-                    return item;
-                })
-                .collect(Collectors.toList());
+                    .map(line -> {
+                        Map<String, Object> item = new HashMap<>();
+                        item.put("taxes", List.of("TVA"));
+                        item.put("description", line.getDescription());
+                        item.put("quantity", line.getQuantity().intValue());
+                        item.put("amount", line.getUnitPrice().multiply(line.getQuantity()).intValue());
+                        return item;
+                    })
+                    .collect(Collectors.toList());
 
         } catch (Exception e) {
             log.error("Erreur lors de la construction des items", e);
@@ -141,7 +150,7 @@ public class DgiClientImpl {
 
     private String mapInvoiceType(String invoiceType) {
         if (invoiceType == null) return "sale";
-        
+
         return switch (invoiceType) {
             case "STANDARD" -> "sale";
             case "PROFORMA" -> "proforma";
@@ -152,7 +161,7 @@ public class DgiClientImpl {
 
     private String mapPaymentMethod(String paymentMode) {
         if (paymentMode == null) return "mobile-money";
-        
+
         return switch (paymentMode) {
             case "CASH" -> "cash";
             case "TRANSFER" -> "bank-transfer";
@@ -168,15 +177,15 @@ public class DgiClientImpl {
         String stickerId = (String) response.getOrDefault("stickerId", "STKR-UNKNOWN");
 
         return DgiClientMock.DgiCertification.builder()
-            .certificationId(dgiReference)
-            .invoiceNumber(invoiceNumber)
-            .dgiReference(dgiReference)
-            .stickerId(stickerId)
-            .certifiedAt(Instant.now())
-            .qrCodeData(qrCode)
-            .qrBase64(qrCode)
-            .status("CERTIFIED")
-            .message("Facture certifiée par la DGI (API Réelle)")
-            .build();
+                .certificationId(dgiReference)
+                .invoiceNumber(invoiceNumber)
+                .dgiReference(dgiReference)
+                .stickerId(stickerId)
+                .certifiedAt(Instant.now())
+                .qrCodeData(qrCode)
+                .qrBase64(qrCode)
+                .status("CERTIFIED")
+                .message("Facture certifiée par la DGI (API Réelle)")
+                .build();
     }
 }
