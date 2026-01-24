@@ -11,6 +11,10 @@ public class InvoiceResponse {
     private Long id;
     private String invoiceNumber;
     private String invoiceType;
+    
+    private String template; 
+    private Boolean isRne;   
+    private String rne;      
     private Instant issueDate;
     private String currency;
 

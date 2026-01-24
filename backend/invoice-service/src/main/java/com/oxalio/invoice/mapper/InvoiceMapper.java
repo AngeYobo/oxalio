@@ -1,4 +1,3 @@
-// src/main/java/com/oxalio/invoice/mapper/InvoiceMapper.java
 package com.oxalio.invoice.mapper;
 
 import com.oxalio.invoice.dto.InvoiceRequest;
@@ -24,7 +23,8 @@ public interface InvoiceMapper {
     @Mapping(target = "totals.subtotal",    source = "subtotal")
     @Mapping(target = "totals.totalVat",    source = "totalVat")
     @Mapping(target = "totals.totalAmount", source = "totalAmount")
-    @Mapping(target = "paymentMode",        source = "paymentMode")
+    // ✅ Correction du nom : source entity.paymentMethod -> target response.paymentMode
+    @Mapping(target = "paymentMode",        source = "paymentMethod") 
     @Mapping(target = "status",             expression = "java(entity.getStatus().name())")
     @Mapping(target = "lines",              source = "lines")
     @Mapping(target = "notes",   ignore = true)
@@ -33,13 +33,17 @@ public interface InvoiceMapper {
     @Mapping(target = "seller.pointOfSaleName",   source = "pointOfSaleName")
     @Mapping(target = "totals.otherTaxes",        source = "otherTaxes")
     @Mapping(target = "totals.totalToPay",        source = "totalToPay")
+    // ✅ Ajout traçabilité RNE
+    @Mapping(target = "template", source = "template")
+    @Mapping(target = "isRne", source = "isRne")
+    @Mapping(target = "rne", source = "rne")
     InvoiceResponse toResponse(InvoiceEntity entity);
 
     default List<InvoiceResponse> toResponseList(List<InvoiceEntity> entities) {
         return entities.stream().map(this::toResponse).collect(Collectors.toList());
     }
 
-    // ===== Entity -> Response (line) =====
+    // ===== Entity -> Response (line) - Inchangé =====
     @Mapping(target = "description", source = "line.description")
     @Mapping(target = "quantity",    source = "line.quantity")
     @Mapping(target = "unitPrice",   source = "line.unitPrice")
@@ -63,24 +67,31 @@ public interface InvoiceMapper {
     @Mapping(target = "status",         ignore = true)
     @Mapping(target = "dgiReference",   ignore = true)
     @Mapping(target = "dgiSubmittedAt", ignore = true)
+    @Mapping(target = "fneInvoiceId",   ignore = true)
+    @Mapping(target = "fneReference",   ignore = true)
     @Mapping(target = "subtotal",       source = "totals.subtotal")
     @Mapping(target = "totalVat",       source = "totals.totalVat")
     @Mapping(target = "totalAmount",    source = "totals.totalAmount")
-    @Mapping(target = "paymentMode",    source = "paymentMode")
+    // ✅ Correction du nom : source request.paymentMode -> target entity.paymentMethod
+    @Mapping(target = "paymentMethod",  source = "paymentMode")
     @Mapping(target = "sellerCompanyName", source = "seller.companyName")
     @Mapping(target = "sellerTaxId",       source = "seller.taxId")
     @Mapping(target = "sellerAddress",     source = "seller.address")
     @Mapping(target = "buyerName",         source = "buyer.name")
     @Mapping(target = "buyerTaxId",        source = "buyer.taxId")
     @Mapping(target = "buyerAddress",      source = "buyer.address")
-    @Mapping(target = "lines",             ignore = true) // gérées dans le service
+    @Mapping(target = "lines",             ignore = true)
     @Mapping(target = "sellerDisplayName", source = "seller.sellerDisplayName")
     @Mapping(target = "pointOfSaleName",   source = "seller.pointOfSaleName")
     @Mapping(target = "otherTaxes",        source = "totals.otherTaxes")
     @Mapping(target = "totalToPay",        source = "totals.totalToPay")
+    // ✅ Ajout traçabilité RNE
+    @Mapping(target = "template", source = "template")
+    @Mapping(target = "isRne", source = "isRne")
+    @Mapping(target = "rne", source = "rne")
     InvoiceEntity toEntity(InvoiceRequest request);
 
-    // ===== Request -> Entity (line) =====
+    // ===== Request -> Entity (line) - Inchangé =====
     @Mapping(target = "id",          ignore = true)
     @Mapping(target = "invoice",     ignore = true)
     @Mapping(target = "description", source = "line.description")
@@ -90,10 +101,8 @@ public interface InvoiceMapper {
     @Mapping(target = "vatAmount",   source = "line.vatAmount")
     @Mapping(target = "discount",    source = "line.discount")
     @Mapping(target = "productCode", source = "line.productCode")
-    // ✅ on mappe désormais depuis le DTO
     @Mapping(target = "sku",         source = "line.sku")
     @Mapping(target = "unit",        source = "line.unit")
-    // calculée dans le service
     @Mapping(target = "lineTotal",   ignore = true)
     InvoiceLineEntity toLineEntity(InvoiceLineDTO line);
 
@@ -103,7 +112,8 @@ public interface InvoiceMapper {
     @BeanMapping(ignoreByDefault = true)
     @Mapping(target = "currency",          source = "currency")
     @Mapping(target = "invoiceType",       source = "invoiceType")
-    @Mapping(target = "paymentMode",       source = "paymentMode")
+    // ✅ Correction ici aussi
+    @Mapping(target = "paymentMethod",     source = "paymentMode")
     @Mapping(target = "sellerCompanyName", source = "seller.companyName")
     @Mapping(target = "sellerTaxId",       source = "seller.taxId")
     @Mapping(target = "sellerAddress",     source = "seller.address")
@@ -112,5 +122,8 @@ public interface InvoiceMapper {
     @Mapping(target = "buyerAddress",      source = "buyer.address")
     @Mapping(target = "sellerDisplayName", source = "seller.sellerDisplayName")
     @Mapping(target = "pointOfSaleName",   source = "seller.pointOfSaleName")
+    @Mapping(target = "template", source = "template")
+    @Mapping(target = "isRne", source = "isRne")
+    @Mapping(target = "rne", source = "rne")
     void updateEntityFromRequest(InvoiceRequest request, @MappingTarget InvoiceEntity entity);
 }

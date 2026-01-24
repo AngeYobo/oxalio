@@ -214,8 +214,8 @@ public class InvoiceService {
         return invoiceMapper.toResponse(updated);
     }
 
-    // ============================================================
-    // BUSINESS LOGIC — CALCUL TOTALS FNE
+// ============================================================
+    // BUSINESS LOGIC — CALCUL TOTALS FNE / RNE
     // ============================================================
     private void computeTotalsFne(InvoiceEntity entity) {
 
@@ -231,16 +231,23 @@ public class InvoiceService {
             discount = discount.add(safe(l.getDiscount()));
         }
 
-        // otherTaxes éventuel (pour l’instant = 0)
-        BigDecimal other = safe(entity.getOtherTaxes());
+        // --- GESTION DU TIMBRE DE QUITTANCE (Point 6 de la composition) ---
+        // Le timbre de 100 CFA est obligatoire pour les paiements en espèces
+        BigDecimal stampDuty = BigDecimal.ZERO;
+        if ("cash".equalsIgnoreCase(entity.getPaymentMethod())) {
+            stampDuty = BigDecimal.valueOf(100);
+        }
 
         entity.setSubtotal(subtotal);
         entity.setTotalVat(totalVat);
-        entity.setTotalAmount(subtotal.add(totalVat));
-        entity.setOtherTaxes(other);
-        entity.setTotalToPay(subtotal.add(totalVat).add(other));
+        entity.setTotalAmount(subtotal.add(totalVat).add(stampDuty));
+        
+        // On affecte le timbre au champ otherTaxes pour la persistance
+        entity.setOtherTaxes(stampDuty); 
+        
+        // Le total à payer inclut désormais : HT + TVA + TIMBRE
+        entity.setTotalToPay(subtotal.add(totalVat).add(stampDuty));
     }
-
     // ============================================================
     // UTILS — BUILD TOTALS FOR RESPONSE
     // ============================================================
@@ -276,206 +283,153 @@ public class InvoiceService {
     @Transactional(readOnly = true)
     public byte[] generateFnePdf(Long id) throws Exception {
         InvoiceResponse inv = getInvoiceById(id);
+        
+        // Définition dynamique pour la conformité RNE/FNE
+        boolean isRne = "B2C".equalsIgnoreCase(inv.getTemplate());
+        String documentTitle = isRne ? "REÇU NORMALISÉ ÉLECTRONIQUE (RNE)" : "FACTURE NORMALISÉE FNE";
+        String labelNumero = isRne ? "Reçu de vente N° : " : "Facture de vente N° : "; // Point 2
 
         try (PDDocument doc = new PDDocument()) {
             PDPage page = new PDPage();
             doc.addPage(page);
 
             try (PDPageContentStream c = new PDPageContentStream(doc, page)) {
-
                 float pageWidth = page.getMediaBox().getWidth();
                 float y = 780f;
 
-                // ==========================
                 // 1) LOGO VENDEUR (HAUT DROITE)
-                // ==========================
                 try {
                     String sellerTaxId = (inv.getSeller() != null) ? inv.getSeller().getTaxId() : null;
                     if (sellerTaxId != null && !sellerTaxId.isBlank()) {
                         byte[] logoBytes = sellerProfileService.getLogoBytes(sellerTaxId);
                         if (logoBytes != null && logoBytes.length > 0) {
                             PDImageXObject logo = PDImageXObject.createFromByteArray(doc, logoBytes, "seller-logo");
-                            float logoWidth = 90f;
-                            float logoHeight = 60f;
-                            float logoX = pageWidth - logoWidth - 40f;
-                            float logoY = y - logoHeight + 10f;
-                            c.drawImage(logo, logoX, logoY, logoWidth, logoHeight);
+                            c.drawImage(logo, pageWidth - 130f, y - 50f, 90f, 60f);
                         }
                     }
                 } catch (Exception e) {
-                    log.warn("Impossible de charger le logo vendeur pour la facture {} : {}", id, e.getMessage());
+                    log.warn("Impossible de charger le logo vendeur pour le document {} : {}", id, e.getMessage());
                 }
 
-
-                // ==========================
-                // 2) TITRE
-                // ==========================
+                // 2) TITRE (Point 1 & 2)
                 c.beginText();
-                c.setFont(PDType1Font.HELVETICA_BOLD, 18);
+                c.setFont(PDType1Font.HELVETICA_BOLD, 16);
                 c.newLineAtOffset(50, y);
-                c.showText("FACTURE NORMALISÉE FNE");
+                c.showText(documentTitle); // Visuel FNE/RNE
                 c.endText();
-
                 y -= 30;
 
-                // ==========================
-                // 3) BLOC VENDEUR
-                // ==========================
+                // 3) BLOC VENDEUR (Point 4)
                 var s = inv.getSeller();
                 c.beginText();
                 c.setFont(PDType1Font.HELVETICA_BOLD, 12);
                 c.newLineAtOffset(50, y);
                 c.showText("VENDEUR");
                 c.endText();
-
                 y -= 15;
 
                 c.beginText();
                 c.setFont(PDType1Font.HELVETICA, 10);
                 c.newLineAtOffset(50, y);
                 c.showText(nvl(s != null ? s.getCompanyName() : null));
+                if (isRne) { // Ajout du Terminal pour le RNE
+                    c.newLineAtOffset(0, -12);
+                    c.showText("TERMINAL : " + nvl(inv.getSeller() != null ? inv.getSeller().getPointOfSaleName() : null));
+                }
                 c.newLineAtOffset(0, -12);
                 c.showText("NCC : " + nvl(s != null ? s.getTaxId() : null));
-                c.newLineAtOffset(0, -12);
-                c.showText("Adresse : " + nvl(s != null ? s.getAddress() : null));
-                c.newLineAtOffset(0, -12);
-                c.showText("Téléphone : " + nvl(s != null ? s.getPhone() : null));
-                c.newLineAtOffset(0, -12);
-                c.showText("Email : " + nvl(s != null ? s.getEmail() : null));
                 c.endText();
+                y -= 60;
 
-                y -= 70;
-
-                // ==========================
-                // 4) BLOC ACHETEUR
-                // ==========================
+                // 4) BLOC ACHETEUR (Point 5)
                 var b = inv.getBuyer();
                 c.beginText();
                 c.setFont(PDType1Font.HELVETICA_BOLD, 12);
                 c.newLineAtOffset(50, y);
                 c.showText("ACHETEUR");
                 c.endText();
-
                 y -= 15;
 
                 c.beginText();
                 c.setFont(PDType1Font.HELVETICA, 10);
                 c.newLineAtOffset(50, y);
                 c.showText(nvl(b != null ? b.getName() : null));
-                c.newLineAtOffset(0, -12);
-                c.showText("NCC : " + nvl(b != null ? b.getTaxId() : null));
-                c.newLineAtOffset(0, -12);
-                c.showText("Adresse : " + nvl(b != null ? b.getAddress() : null));
-                c.newLineAtOffset(0, -12);
-                c.showText("Téléphone : " + nvl(b != null ? b.getPhone() : null));
-                c.newLineAtOffset(0, -12);
-                c.showText("Email : " + nvl(b != null ? b.getEmail() : null));
                 c.endText();
+                y -= 40;
 
-                y -= 70;
-
-                // ==========================
-                // 5) INFOS FACTURE
-                // ==========================
+                // 5) INFOS DOCUMENT (Point 2)
                 c.beginText();
-                c.setFont(PDType1Font.HELVETICA, 10);
+                c.setFont(PDType1Font.HELVETICA_BOLD, 10);
                 c.newLineAtOffset(50, y);
-                c.showText("Numéro facture : " + nvl(inv.getInvoiceNumber()));
+                c.showText(labelNumero + nvl(inv.getInvoiceNumber())); // Numéro format spécial
                 c.newLineAtOffset(0, -12);
+                c.setFont(PDType1Font.HELVETICA, 10);
                 c.showText("Date émission : " + (inv.getIssueDate() != null ? inv.getIssueDate().toString() : "—"));
-                c.newLineAtOffset(0, -12);
-                c.showText("Sticker ID : " + nvl(inv.getStickerId()));
-                c.newLineAtOffset(0, -12);
-                c.showText("Réf. DGI : " + nvl(inv.getDgiReference()));
                 c.endText();
+                y -= 40;
 
-                y -= 60;
-
-                // ==========================
-                // 6) TABLEAU PRODUITS (simple pour l’instant)
-                // ==========================
+                // 6) TABLEAU PRODUITS
                 c.beginText();
                 c.setFont(PDType1Font.HELVETICA_BOLD, 10);
                 c.newLineAtOffset(50, y);
                 c.showText("Désignation | Qté | P.U HT | TVA | Total TTC");
                 c.endText();
-
                 y -= 15;
-                c.setFont(PDType1Font.HELVETICA, 10);
 
                 if (inv.getLines() != null) {
+                    c.setFont(PDType1Font.HELVETICA, 10);
                     for (InvoiceResponse.InvoiceLineDTO line : inv.getLines()) {
                         c.beginText();
                         c.newLineAtOffset(50, y);
-                        c.showText(
-                                nvl(line.getDescription()) + " | " +
-                                nbd(line.getQuantity()) + " | " +
-                                nbd(line.getUnitPrice()) + " | " +
-                                nbd(line.getVatAmount()) + " | " +
-                                nbd(line.getLineTotal())
-                        );
+                        c.showText(nvl(line.getDescription()) + " | " + nbd(line.getQuantity()) + " | " + nbd(line.getUnitPrice()) + " | " + nbd(line.getVatAmount()) + " | " + nbd(line.getLineTotal()));
                         c.endText();
                         y -= 15;
-                        if (y < 120) break; // pour éviter de descendre trop bas sur 1 page
                     }
                 }
+                y -= 20;
 
-                y -= 30;
-
-                // ==========================
-                // 7) TOTAUX
-                // ==========================
+                // 7) TOTAUX & MODE DE PAIEMENT (Point 6 & 7)
                 var t = inv.getTotals();
-                BigDecimal subtotal = t != null && t.getSubtotal() != null ? t.getSubtotal() : BigDecimal.ZERO;
-                BigDecimal vat      = t != null && t.getTotalVat() != null ? t.getTotalVat() : BigDecimal.ZERO;
-                BigDecimal other    = t != null && t.getOtherTaxes() != null ? t.getOtherTaxes() : BigDecimal.ZERO;
-                BigDecimal total    = t != null && t.getTotalToPay() != null ? t.getTotalToPay() : subtotal.add(vat).add(other);
+                BigDecimal subtotal = t != null ? safe(t.getSubtotal()) : BigDecimal.ZERO;
+                BigDecimal vat = t != null ? safe(t.getTotalVat()) : BigDecimal.ZERO;
+                BigDecimal other = t != null ? safe(t.getOtherTaxes()) : BigDecimal.ZERO;
+                BigDecimal total = t != null ? safe(t.getTotalToPay()) : subtotal.add(vat).add(other);
 
                 c.beginText();
                 c.setFont(PDType1Font.HELVETICA_BOLD, 10);
                 c.newLineAtOffset(50, y);
-                c.showText("Résumé des montants");
+                c.showText("RÉSUMÉ DES MONTANTS");
                 c.endText();
-
                 y -= 15;
 
                 c.beginText();
                 c.setFont(PDType1Font.HELVETICA, 10);
                 c.newLineAtOffset(50, y);
-                c.showText("Sous-total HT : " + subtotal);
+                c.showText("Sous-total HT : " + nbd(subtotal));
                 c.newLineAtOffset(0, -12);
-                c.showText("TVA : " + vat);
-                c.newLineAtOffset(0, -12);
-                c.showText("Autres taxes : " + other);
-                c.newLineAtOffset(0, -12);
-                c.showText("TOTAL À PAYER : " + total);
+                c.showText("TVA : " + nbd(vat));
+                if (other.compareTo(BigDecimal.ZERO) > 0) {
+                    c.newLineAtOffset(0, -12);
+                    c.showText("TIMBRE DE QUITTANCE : " + nbd(other)); // Point 6
+                }
+                c.newLineAtOffset(0, -15);
+                c.setFont(PDType1Font.HELVETICA_BOLD, 11);
+                c.showText("TOTAL À PAYER TTC : " + nbd(total) + " CFA"); // Point 6
+                c.newLineAtOffset(0, -15);
+                c.showText("MODE DE PAIEMENT : " + (inv.getPaymentMode() != null ? inv.getPaymentMode() : "Espèces")); // Point 7
                 c.endText();
 
-                // ==========================
-                // 8) QR CODE FNE (Base64) en bas à droite
-                // ==========================
+                // 8) QR CODE DE CERTIFICATION (Point 3)
                 if (inv.getQrBase64() != null && !inv.getQrBase64().isBlank()) {
                     try {
                         byte[] qrBytes = Base64.getDecoder().decode(inv.getQrBase64());
                         PDImageXObject qr = PDImageXObject.createFromByteArray(doc, qrBytes, "qr");
-                        float qrSize = 110f;
-                        float qrX = pageWidth - qrSize - 40f;
-                        float qrY = 80f;
-                        c.drawImage(qr, qrX, qrY, qrSize, qrSize);
+                        c.drawImage(qr, (pageWidth - 110) / 2, 80f, 110f, 110f); // Centrage
                     } catch (Exception e) {
-                        log.warn("QR invalide pour la facture {} : {}", id, e.getMessage());
+                        log.warn("QR invalide : {}", e.getMessage());
                     }
                 }
-
-                // ==========================
-                // 9) FOOTER
-                // ==========================
-                c.beginText();
-                c.setFont(PDType1Font.HELVETICA_OBLIQUE, 8);
-                c.newLineAtOffset(50, 50);
-                c.showText("Facture normalisée conforme FNE – Oxalio Plateform (génération mock)");
-                c.endText();
-            }
+            } // Fin du try-with-resources ContentStream
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             doc.save(baos);

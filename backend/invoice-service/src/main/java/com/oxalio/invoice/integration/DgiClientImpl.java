@@ -99,7 +99,7 @@ public class DgiClientImpl {
     private Map<String, Object> buildDgiPayload(InvoiceEntity invoice) {
         Map<String, Object> payload = new HashMap<>();
         payload.put("invoiceType", mapInvoiceType(invoice.getInvoiceType()));
-        payload.put("paymentMethod", mapPaymentMethod(invoice.getPaymentMode()));
+        payload.put("paymentMethod", mapPaymentMethod(invoice.getPaymentMethod()));
         payload.put("template", "B2B");
         payload.put("isRne", false);
         payload.put("clientNcc", invoice.getBuyerTaxId());

@@ -145,20 +145,18 @@ class InvoiceControllerTest {
     private InvoiceRequest buildValidInvoiceRequest() {
         return InvoiceRequest.builder()
                 .invoiceType("STANDARD")
+                .template("B2C") 
                 .currency("XOF")
-                .seller(SellerDTO.builder()
-                        .taxId("CI1234567")
+                .seller(com.oxalio.invoice.model.SellerDTO.builder()
+                        .taxId("CI12345678") // ✅ Doit respecter le Pattern ^CI[0-9]{7,10}$
                         .companyName("Oxalio SARL")
-                        .address("Abidjan, Plateau")
-                        .email("contact@oxalio.com")
-                        .phone("+2250701020304")
+                        .address("Abidjan, Plateau, Immeuble Alpha") // ✅ AJOUTER CECI
+                        .pointOfSaleName("TERMINAL-01") 
                         .build())
-                .buyer(BuyerDTO.builder()
-                        .taxId("CI7654321")
+                .buyer(com.oxalio.invoice.model.BuyerDTO.builder()
+                        .taxId("CI87654321")
                         .name("Client Démo")
-                        .address("Cocody, Riviera")
-                        .email("client@demo.com")
-                        .phone("+2250705060708")
+                        .address("Abidjan, Cocody, Rue des Jardins") // ✅ AJOUTER CECI
                         .build())
                 .lines(List.of(
                         InvoiceRequest.InvoiceLineDTO.builder()
@@ -168,19 +166,18 @@ class InvoiceControllerTest {
                                 .vatRate(BigDecimal.valueOf(18))
                                 .vatAmount(BigDecimal.valueOf(3600))
                                 .discount(BigDecimal.ZERO)
-                                .productCode("PROD-A001")
                                 .build()
                 ))
                 .totals(InvoiceRequest.TotalsDTO.builder()
                         .subtotal(BigDecimal.valueOf(20000))
                         .totalVat(BigDecimal.valueOf(3600))
                         .totalAmount(BigDecimal.valueOf(23600))
-                        .totalDiscount(BigDecimal.ZERO)
+                        .otherTaxes(BigDecimal.valueOf(100))
+                        .totalToPay(BigDecimal.valueOf(23700))
                         .build())
-                .paymentMode("TRANSFER")
-                .notes("Facture de test")
+                .paymentMode("CASH")
                 .build();
-    }
+        }
 
     private InvoiceResponse buildInvoiceResponse() {
         return InvoiceResponse.builder()

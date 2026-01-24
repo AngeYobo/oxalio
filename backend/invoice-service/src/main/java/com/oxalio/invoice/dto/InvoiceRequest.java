@@ -134,4 +134,12 @@ public class InvoiceRequest {
         private BigDecimal totalToPay;
     }
 
+    @NotBlank(message = "Le template est obligatoire (B2B ou B2C)")
+    @Pattern(regexp = "B2B|B2C", message = "Le template doit être B2B (Facture) ou B2C (Reçu)")
+    private String template; //
+
+    private Boolean isRne;   // Pour la traçabilité DGI
+    
+    private String rne;      // Référence du reçu d'origine
+
 }

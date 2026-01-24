@@ -145,6 +145,7 @@ public class FneStickerClient {
         private String paymentMethod;    // "cash", "mobile-money", etc.
         private String template;         // "B2B", "B2C", "B2F"
         private Boolean isRne = false;
+        private String rne;
         
         // Client/Fournisseur
         private String clientNcc;

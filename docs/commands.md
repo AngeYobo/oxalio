@@ -15,3 +15,5 @@ mvn flyway:migrate
 
 # 6. Vérifier la génération du mapper
 ls target/generated-sources/annotations/com/oxalio/invoiceservice/mapper/
+
+mvn spring-boot:run -Dspring-boot.run.profiles=mock

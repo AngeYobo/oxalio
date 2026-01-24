@@ -77,8 +77,9 @@ public class InvoiceEntity {
     private BigDecimal totalAmount;
 
     // ---------------- Paiement (optionnel)
-    @Column(length = 64)
-    private String paymentMode;
+    @Column(name = "payment_method", length = 64)
+    private String paymentMethod;
+    
 
     // ---------------- Sticker / QR
     @Column(length = 64)
@@ -152,4 +153,14 @@ public class InvoiceEntity {
             status = InvoiceStatus.RECEIVED;
         }
     }
+
+    // ---------------- Traçabilité RNE/FNE
+    @Column(length = 10)
+    private String template;   // Stockera "B2B" ou "B2C"
+
+    @Column
+    private Boolean isRne;     // Indique si c'est une régularisation de reçu
+
+    @Column(length = 64)
+    private String rne;        // Référence du reçu d'origine le cas échéant
 }
