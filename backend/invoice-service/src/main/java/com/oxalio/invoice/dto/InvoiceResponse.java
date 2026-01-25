@@ -5,6 +5,7 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.time.LocalDateTime; 
 
 @Data @NoArgsConstructor @AllArgsConstructor @Builder
 public class InvoiceResponse {
@@ -33,6 +34,15 @@ public class InvoiceResponse {
 
     private String notes;
     private String message;     // ✅ ajouté pour DgiClient.setMessage(...)
+    
+    // FNE fields
+    private String fneInvoiceId;      // UUID FNE
+    private String fneReference;      // Référence DGI (ex: 2505842N26000000129)
+    private String fneToken;          // URL de vérification
+    private String paymentMethod;     // cash, mobile-money, etc.
+    // Dates
+    private LocalDateTime createdAt;
+    private LocalDateTime issuedAt;
 
     @Data @NoArgsConstructor @AllArgsConstructor @Builder
     public static class SellerDTO {
@@ -73,6 +83,7 @@ public class InvoiceResponse {
         private String sku;
         private String unit;
         private String productCode;
+        private String fneItemId;
     }
 
     @Data @NoArgsConstructor @AllArgsConstructor @Builder

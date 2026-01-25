@@ -5,6 +5,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 // ========================================
 import Layout from "./components/Layout";
 import AdminLayout from "./components/AdminLayout";
+import AdminQuickLogin from './pages/AdminQuickLogin';
 
 // ========================================
 // Components
@@ -54,6 +55,7 @@ export default function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/register-tenant" element={<RegisterTenant />} />
         <Route path="/register/success" element={<RegisterSuccess />} />
+        <Route path="/admin-quick-login" element={<AdminQuickLogin />} />
 
         {/* ==================== */}
         {/* Routes protégées - Utilisateur normal */}

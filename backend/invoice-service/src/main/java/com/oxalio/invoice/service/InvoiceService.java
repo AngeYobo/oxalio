@@ -478,4 +478,19 @@ public class InvoiceService {
                 + " " + e.getCurrency()
                 + " | Date:" + e.getIssueDate();
     }
+
+    @Transactional
+    public InvoiceResponse refundInvoice(Long id, com.oxalio.invoice.dto.RefundRequest refundRequest) {
+        InvoiceEntity original = invoiceRepository.findById(id)
+                .orElseThrow(() -> new InvoiceNotFoundException(id));
+
+        log.info("Traitement de l'avoir pour la facture : {} pour la raison : {}", 
+                original.getInvoiceNumber(), refundRequest.getReason());
+
+        // Logique simplifiée pour la DGI : On passe le statut en REFUNDED
+        original.setStatus(InvoiceStatus.CANCELLED); 
+        
+        InvoiceEntity saved = invoiceRepository.save(original);
+        return invoiceMapper.toResponse(saved);
+    }
 }

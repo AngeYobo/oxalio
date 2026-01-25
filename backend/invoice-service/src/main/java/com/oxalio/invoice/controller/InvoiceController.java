@@ -14,7 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-
+import com.oxalio.invoice.dto.RefundRequest;
 import java.util.List;
 
 @Slf4j
@@ -122,7 +122,16 @@ public class InvoiceController {
         InvoiceResponse resp = invoiceService.submitToDgi(id);
         return ResponseEntity.ok(resp);
     }
-
+    @PostMapping("/{id}/refund")
+    @Operation(summary = "Générer un avoir (Refund) pour une facture")
+    public ResponseEntity<InvoiceResponse> refundInvoice(
+            @PathVariable Long id,
+            @RequestBody RefundRequest refundRequest
+    ) {
+        log.info("Demande d'avoir pour la facture ID: {}", id);
+        InvoiceResponse response = invoiceService.refundInvoice(id, refundRequest);
+        return ResponseEntity.ok(response);
+    }
     // ============================================================
     // PDF MOCK
     // ============================================================

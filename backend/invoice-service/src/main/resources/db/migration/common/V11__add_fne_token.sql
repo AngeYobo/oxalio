@@ -1,0 +1,1 @@
+ALTER TABLE invoices ADD COLUMN fne_token VARCHAR(255);

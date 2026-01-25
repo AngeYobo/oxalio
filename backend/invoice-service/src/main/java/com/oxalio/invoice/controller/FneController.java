@@ -10,6 +10,8 @@ import com.oxalio.invoice.config.FneConfiguration;
 import com.oxalio.invoice.entity.InvoiceEntity;
 import com.oxalio.invoice.entity.InvoiceLineEntity;
 import com.oxalio.invoice.repository.InvoiceRepository;
+import com.oxalio.invoice.service.QrCodeGenerator;
+import com.oxalio.invoice.service.RneTicketPdfService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -19,6 +21,7 @@ import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -47,6 +50,8 @@ public class FneController {
     private final FneStickerClient fneClient;
     private final FneConfiguration config;
     private final InvoiceRepository invoiceRepository;
+    private final QrCodeGenerator qrCodeGenerator; // ✅ injecte
+    private final RneTicketPdfService rneTicketPdfService; // recommandé (voir 2.3)
 
     /**
      * Endpoint de test - Informations configuration.
@@ -92,18 +97,8 @@ public class FneController {
 
         // Champ RNE (conformité : obligatoire si isRne=true)
         // NB: suppose que FneInvoiceRequest expose setRne(). Si non, il faudra l'ajouter côté client DTO.
-        try {
-            // évite erreur de compilation si setRne n'existe pas : vous verrez immédiatement l'erreur et pourrez l'ajouter.
-            fneRequest.getClass().getMethod("setRne", String.class).invoke(fneRequest, request.getRne());
-        } catch (NoSuchMethodException ignored) {
-            if (isRne) {
-                throw new ResponseStatusException(
-                        HttpStatus.INTERNAL_SERVER_ERROR,
-                        "FneInvoiceRequest ne supporte pas setRne(...). Ajoutez le champ rne au DTO client FNE."
-                );
-            }
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erreur mapping rne vers requête FNE");
+        if (isRne && request.getRne() != null) {
+            fneRequest.setRne(request.getRne());
         }
 
         // Client
@@ -149,6 +144,14 @@ public class FneController {
         // Signer via FNE
         FneInvoiceResponse response = fneClient.signInvoice(fneRequest);
 
+        // Garde anti-NPE : si FNE ne renvoie pas ce qu’on attend
+        if (response == null || response.getInvoice() == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_GATEWAY,
+                    "Réponse FNE invalide: invoice manquant (response/invoice null)"
+            );
+        }
+
         // ════════════════════════════════════════════════════════════════
         // ✨ Stocker les UUID FNE dans la base de données (si internalInvoiceId fourni)
         // ════════════════════════════════════════════════════════════════
@@ -157,18 +160,26 @@ public class FneController {
                 InvoiceEntity invoice = invoiceRepository.findById(request.getInternalInvoiceId())
                         .orElseThrow(() -> new RuntimeException("Invoice not found: " + request.getInternalInvoiceId()));
 
-                // Stocker l'ID UUID et la référence DGI
+                // Stocker l'ID UUID, la référence DGI, FneToken, PaymentMethod, Template et IsRne pour request Rne
                 invoice.setFneInvoiceId(response.getInvoice().getId());
                 invoice.setFneReference(response.getReference());
+                invoice.setFneToken(response.getToken());     // ✅ AJOUT
+                invoice.setPaymentMethod(request.getPaymentMethod()); // ✅ utile pour ticket
+                invoice.setTemplate(request.getTemplate());
+                invoice.setIsRne(isRne);
+                invoice.setRne(request.getRne());
 
                 // Stocker les IDs des items
                 List<InvoiceLineEntity> lines = invoice.getLines();
                 List<FneInvoiceResponse.InvoiceDetails.InvoiceItemDetails> fneItems =
                         response.getInvoice().getItems();
 
-                for (int i = 0; i < Math.min(lines.size(), fneItems.size()); i++) {
-                    lines.get(i).setFneItemId(fneItems.get(i).getId());
+                if (lines != null && fneItems != null) {
+                    for (int i = 0; i < Math.min(lines.size(), fneItems.size()); i++) {
+                        lines.get(i).setFneItemId(fneItems.get(i).getId());
+                    }
                 }
+
 
                 invoiceRepository.save(invoice);
 
@@ -241,6 +252,121 @@ public class FneController {
         return ResponseEntity.ok(response);
     }
 
+    // ════════════════════════════════════════════════════════════════
+    // GET RNE Ticket PDF
+    // ════════════════════════════════════════════════════════════════
+
+    /**
+     * Télécharger le ticket RNE au format PDF
+     * 
+     * Ce endpoint génère et retourne un PDF de ticket RNE conforme aux 
+     * spécifications FNE/DGI. Le ticket contient le QR code de vérification,
+     * la référence FNE, et toutes les informations de la transaction.
+     * 
+     * @param internalId ID interne de la facture
+     * @return PDF bytes du ticket RNE
+     */
+    @GetMapping(
+        value = "/invoices/{internalId}/rne-ticket.pdf",
+        produces = MediaType.APPLICATION_PDF_VALUE
+    )
+    public ResponseEntity<byte[]> downloadRneTicket(@PathVariable Long internalId) {
+        
+        log.info("📄 Request to download RNE ticket for invoice ID: {}", internalId);
+        
+        // 1. Récupérer la facture
+        InvoiceEntity invoice = invoiceRepository.findById(internalId)
+                .orElseThrow(() -> {
+                    log.error("❌ Invoice not found: {}", internalId);
+                    return new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Invoice not found: " + internalId
+                    );
+                });
+        
+        log.debug("Invoice found: {}, Status: {}", invoice.getId(), invoice.getStatus());
+        
+        // ========================================
+        // Guards indispensables
+        // ========================================
+        
+        // 2. Vérifier que le token FNE existe
+        if (invoice.getFneToken() == null || invoice.getFneToken().isBlank()) {
+            log.error("❌ FNE token missing for invoice {}", internalId);
+            throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "FNE token non stocké. Impossible de générer le ticket RNE."
+            );
+        }
+        
+        // 3. Vérifier que la référence FNE existe
+        if (invoice.getFneReference() == null || invoice.getFneReference().isBlank()) {
+            log.error("❌ FNE reference missing for invoice {}", internalId);
+            throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "FNE reference non stockée. Impossible de générer le ticket RNE."
+            );
+        }
+        
+        // 4. Vérifier que le mode de paiement existe
+        if (invoice.getPaymentMethod() == null || invoice.getPaymentMethod().isBlank()) {
+            log.error("❌ Payment mode missing for invoice {}", internalId);
+            throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "paymentMethod non stocké. Impossible de générer le ticket RNE."
+            );
+        }
+        
+        // 5. Vérifier que le template existe
+        if (invoice.getTemplate() == null || invoice.getTemplate().isBlank()) {
+            log.error("❌ Template missing for invoice {}", internalId);
+            throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "template non stocké. Impossible de générer le ticket RNE."
+            );
+        }
+        
+        log.info("✅ All guards passed for invoice {}", internalId);
+        
+        // ========================================
+        // Génération du QR Code
+        // ========================================
+        
+        try {
+            // Générer le QR code PNG depuis le token FNE
+            // Le token contient l'URL de vérification DGI
+            byte[] qrPng = qrCodeGenerator.generateQrCode(invoice.getFneToken(), 240, 240);
+            
+            log.info("✅ QR code generated: {} bytes", qrPng.length);
+            
+            // ========================================
+            // Génération du PDF
+            // ========================================
+            
+            byte[] pdfBytes = rneTicketPdfService.render(invoice, qrPng);
+            
+            log.info("✅ PDF generated: {} bytes", pdfBytes.length);
+            
+            // ========================================
+            // Retour du PDF
+            // ========================================
+            
+            String filename = "rne-" + invoice.getFneReference() + ".pdf";
+            
+            return ResponseEntity.ok()
+                    .header("Content-Disposition", "inline; filename=" + filename)
+                    .header("Cache-Control", "no-cache, no-store, must-revalidate")
+                    .body(pdfBytes);
+                    
+        } catch (Exception e) {
+            log.error("❌ Error generating RNE ticket for invoice {}: {}", 
+                internalId, e.getMessage(), e);
+            throw new ResponseStatusException(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "Erreur lors de la génération du ticket RNE: " + e.getMessage()
+            );
+        }
+    }
     // ════════════════════════════════════════════════════════════════
     // DTOs de requête
     // ════════════════════════════════════════════════════════════════
@@ -337,4 +463,6 @@ public class FneController {
             private Integer quantity;
         }
     }
+
+    
 }

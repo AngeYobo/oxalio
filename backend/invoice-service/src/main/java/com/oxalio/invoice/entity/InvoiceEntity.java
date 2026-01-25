@@ -27,6 +27,15 @@ import java.util.List;
 )
 public class InvoiceEntity {
 
+    private String clientCompanyName;
+    private String clientPhone;
+    private String clientEmail;
+    private String clientNcc;
+    private String establishment;
+    private String pointOfSale;
+    private String commercialMessage;
+    private BigDecimal totalDiscount;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -143,6 +152,7 @@ public class InvoiceEntity {
     @EqualsAndHashCode.Exclude
     private List<InvoiceLineEntity> lines = new ArrayList<>();
 
+
     // ---------------- Hooks
     @PrePersist
     protected void onCreate() {
@@ -163,4 +173,8 @@ public class InvoiceEntity {
 
     @Column(length = 64)
     private String rne;        // Référence du reçu d'origine le cas échéant
+
+    @Column(name = "fne_token", length = 255)
+    private String fneToken;
+
 }

@@ -33,7 +33,7 @@ public class InvoiceLineEntity {
     // Référence article (facultatif) – utile pour le PDF "spécimen"
     @Column(name = "sku", length = 64)
     private String sku;
-
+    
     // Unité de mesure (ex: PCS, KG, L, H) – facultative
     @Column(name = "unit", length = 16)
     private String unit;
