@@ -4,8 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.oxalio.invoice.dto.InvoiceRequest;
 import com.oxalio.invoice.dto.InvoiceResponse;
 import com.oxalio.invoice.service.InvoiceService;
-import com.oxalio.invoice.model.SellerDTO;
-import com.oxalio.invoice.model.BuyerDTO;
+import com.oxalio.invoice.dto.SellerDTO;
+import com.oxalio.invoice.dto.BuyerDTO;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -147,14 +147,14 @@ class InvoiceControllerTest {
                 .invoiceType("STANDARD")
                 .template("B2C") 
                 .currency("XOF")
-                .seller(com.oxalio.invoice.model.SellerDTO.builder()
-                        .taxId("CI12345678") // ✅ Doit respecter le Pattern ^CI[0-9]{7,10}$
+                .seller(com.oxalio.invoice.dto.SellerDTO.builder()
+                        .taxId("2505842N") // ✅ Doit respecter le Pattern ^CI[0-9]{7,10}$
                         .companyName("Oxalio SARL")
                         .address("Abidjan, Plateau, Immeuble Alpha") // ✅ AJOUTER CECI
                         .pointOfSaleName("TERMINAL-01") 
                         .build())
-                .buyer(com.oxalio.invoice.model.BuyerDTO.builder()
-                        .taxId("CI87654321")
+                .buyer(com.oxalio.invoice.dto.BuyerDTO.builder()
+                        .taxId("7654321N")
                         .name("Client Démo")
                         .address("Abidjan, Cocody, Rue des Jardins") // ✅ AJOUTER CECI
                         .build())
@@ -187,14 +187,14 @@ class InvoiceControllerTest {
                 .currency("XOF")
                 .issueDate(Instant.now())
                 .seller(InvoiceResponse.SellerDTO.builder()
-                        .taxId("CI1234567")
+                        .taxId("2505842N")
                         .companyName("Oxalio SARL")
                         .address("Abidjan, Plateau")
                         .email("contact@oxalio.com")
                         .phone("+2250701020304")
                         .build())
                 .buyer(InvoiceResponse.BuyerDTO.builder()
-                        .taxId("CI7654321")
+                        .taxId("7654321N")
                         .name("Client Démo")
                         .address("Cocody, Riviera")
                         .email("client@demo.com")
@@ -227,4 +227,92 @@ class InvoiceControllerTest {
                 .issueDate(Instant.now())
                 .build();
     }
+
+    @Test
+        void shouldCreateBapaSuccessfully() throws Exception {
+        InvoiceRequest request = buildValidBapaRequest();
+        InvoiceResponse response = buildBapaResponse();
+        
+        when(invoiceService.createInvoice(any(InvoiceRequest.class))).thenReturn(response);
+        
+        mockMvc.perform(post("/api/v1/invoices")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.invoiceType").value("purchase"));
+        }
+
+        @Test
+        void shouldAcceptEmptyBuyerTaxIdForBapa() throws Exception {
+        InvoiceRequest request = buildValidBapaRequest();
+        request.getBuyer().setTaxId(""); // Producteur sans NCC
+        
+        InvoiceResponse response = buildBapaResponse();
+        when(invoiceService.createInvoice(any(InvoiceRequest.class))).thenReturn(response);
+        
+        mockMvc.perform(post("/api/v1/invoices")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
+        }
+
+        @Test
+        void shouldAcceptMobileMoneyPayment() throws Exception {
+        InvoiceRequest request = buildValidInvoiceRequest();
+        request.setPaymentMode("MOBILE_MONEY");
+        
+        InvoiceResponse response = buildInvoiceResponse();
+        when(invoiceService.createInvoice(any(InvoiceRequest.class))).thenReturn(response);
+        
+        mockMvc.perform(post("/api/v1/invoices")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
+        }
+
+        private InvoiceRequest buildValidBapaRequest() {
+        return InvoiceRequest.builder()
+                .invoiceType("purchase")
+                .template("purchase")
+                .currency("XOF")
+                .seller(SellerDTO.builder()
+                .taxId("2505842N")
+                .companyName("COOPÉRATIVE AGRICOLE")
+                .address("Bouaké")
+                .build())
+                .buyer(BuyerDTO.builder()
+                .taxId("")
+                .name("KOUASSI Jean")
+                .phone("0708123456")
+                .build())
+                .lines(List.of(
+                InvoiceRequest.InvoiceLineDTO.builder()
+                        .description("Cacao")
+                        .quantity(BigDecimal.valueOf(500))
+                        .unitPrice(BigDecimal.valueOf(750))
+                        .vatRate(BigDecimal.ZERO)
+                        .vatAmount(BigDecimal.ZERO)
+                        .discount(BigDecimal.ZERO)
+                        .build()
+                ))
+                .totals(InvoiceRequest.TotalsDTO.builder()
+                .subtotal(BigDecimal.valueOf(375000))
+                .totalVat(BigDecimal.ZERO)
+                .totalAmount(BigDecimal.valueOf(375000))
+                .totalToPay(BigDecimal.valueOf(375000))
+                .build())
+                .paymentMode("CASH")
+                .build();
+        }
+
+        private InvoiceResponse buildBapaResponse() {
+        return InvoiceResponse.builder()
+                .id(1L)
+                .invoiceNumber("INV-2026-000001")
+                .invoiceType("purchase")
+                .template("purchase")
+                .currency("XOF")
+                .status("RECEIVED")
+                .build();
+        }
 }

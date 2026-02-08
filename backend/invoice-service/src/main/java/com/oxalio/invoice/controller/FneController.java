@@ -12,6 +12,7 @@ import com.oxalio.invoice.entity.InvoiceLineEntity;
 import com.oxalio.invoice.repository.InvoiceRepository;
 import com.oxalio.invoice.service.QrCodeGenerator;
 import com.oxalio.invoice.service.RneTicketPdfService;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -180,6 +181,14 @@ public class FneController {
                     }
                 }
 
+
+                // Générer QR Code avec le token FNE
+                if (response.getToken() != null && !response.getToken().isEmpty()) {
+                    String qrBase64 = qrCodeGenerator.generateQRCodeBase64(
+                        response.getToken(), 300, 300
+                    );
+                    invoice.setQrBase64(qrBase64);
+                }
 
                 invoiceRepository.save(invoice);
 
@@ -430,7 +439,7 @@ public class FneController {
 
         private String reference;
 
-        @NotEmpty(message = "taxes est obligatoire et ne doit pas être vide")
+        // @NotEmpty(message = "taxes est obligatoire et ne doit pas être vide")
         private List<String> taxes;
 
         @NotBlank(message = "description est obligatoire")

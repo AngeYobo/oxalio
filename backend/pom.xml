@@ -16,6 +16,7 @@
     <module>auth-service</module>
     <module>invoice-service</module>
     <module>integration-service</module>
+    <module>terne-device-service</module>
   </modules>
 
   <!-- Propriétés globales -->

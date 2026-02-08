@@ -10,25 +10,11 @@ import com.oxalio.invoice.integration.DgiClientMock.DgiCertification;
 import com.oxalio.invoice.mapper.InvoiceMapper;
 import com.oxalio.invoice.model.InvoiceStatus;
 import com.oxalio.invoice.repository.InvoiceRepository;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
-import org.apache.pdfbox.pdmodel.PDPageContentStream;
-import org.apache.pdfbox.pdmodel.font.PDType1Font;
-import java.io.ByteArrayOutputStream;
-import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
-import com.oxalio.invoice.repository.SellerProfileRepository;
-import com.oxalio.invoice.service.SellerProfileService;
-import java.io.ByteArrayOutputStream;
-import java.util.Base64;
-
-
-
-import java.util.Base64;
-
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -46,10 +32,10 @@ public class InvoiceService {
     private final QrCodeGenerator qrCodeGenerator;
     private final DgiClientMock dgiClientMock;
     private final SellerProfileService sellerProfileService;
-
+    private final HtmlPdfService htmlPdfService;
 
     // ============================================================
-    // CREATE — FNE STRICT (TOT AUX CALCULÉS PAR LE BACKEND)
+    // CREATE — FNE STRICT (TOTAUX CALCULÉS PAR LE BACKEND)
     // ============================================================
     @Transactional
     public InvoiceResponse createInvoice(InvoiceRequest request) {
@@ -84,8 +70,7 @@ public class InvoiceService {
         computeTotalsFne(entity);
 
         // QR code
-        entity.setQrBase64(qrCodeGenerator.generateQRCodeBase64(
-                buildQRContent(entity), 300, 300));
+        entity.setQrBase64(null);
 
         InvoiceEntity saved = invoiceRepository.save(entity);
 
@@ -214,7 +199,7 @@ public class InvoiceService {
         return invoiceMapper.toResponse(updated);
     }
 
-// ============================================================
+    // ============================================================
     // BUSINESS LOGIC — CALCUL TOTALS FNE / RNE
     // ============================================================
     private void computeTotalsFne(InvoiceEntity entity) {
@@ -231,8 +216,7 @@ public class InvoiceService {
             discount = discount.add(safe(l.getDiscount()));
         }
 
-        // --- GESTION DU TIMBRE DE QUITTANCE (Point 6 de la composition) ---
-        // Le timbre de 100 CFA est obligatoire pour les paiements en espèces
+        // --- GESTION DU TIMBRE DE QUITTANCE ---
         BigDecimal stampDuty = BigDecimal.ZERO;
         if ("cash".equalsIgnoreCase(entity.getPaymentMethod())) {
             stampDuty = BigDecimal.valueOf(100);
@@ -241,13 +225,10 @@ public class InvoiceService {
         entity.setSubtotal(subtotal);
         entity.setTotalVat(totalVat);
         entity.setTotalAmount(subtotal.add(totalVat).add(stampDuty));
-        
-        // On affecte le timbre au champ otherTaxes pour la persistance
-        entity.setOtherTaxes(stampDuty); 
-        
-        // Le total à payer inclut désormais : HT + TVA + TIMBRE
+        entity.setOtherTaxes(stampDuty);
         entity.setTotalToPay(subtotal.add(totalVat).add(stampDuty));
     }
+
     // ============================================================
     // UTILS — BUILD TOTALS FOR RESPONSE
     // ============================================================
@@ -280,176 +261,68 @@ public class InvoiceService {
                 .build();
     }
 
+    // ============================================================
+    // GENERATE FNE PDF (avec ou sans certification)
+    // ============================================================
     @Transactional(readOnly = true)
-    public byte[] generateFnePdf(Long id) throws Exception {
-        InvoiceResponse inv = getInvoiceById(id);
+    public byte[] generateFnePdf(Long invoiceId) {
+        // 1. Récupérer la facture
+        InvoiceEntity entity = invoiceRepository.findById(invoiceId)
+            .orElseThrow(() -> new InvoiceNotFoundException(invoiceId));
         
-        // Définition dynamique pour la conformité RNE/FNE
-        boolean isRne = "B2C".equalsIgnoreCase(inv.getTemplate());
-        String documentTitle = isRne ? "REÇU NORMALISÉ ÉLECTRONIQUE (RNE)" : "FACTURE NORMALISÉE FNE";
-        String labelNumero = isRne ? "Reçu de vente N° : " : "Facture de vente N° : "; // Point 2
-
-        try (PDDocument doc = new PDDocument()) {
-            PDPage page = new PDPage();
-            doc.addPage(page);
-
-            try (PDPageContentStream c = new PDPageContentStream(doc, page)) {
-                float pageWidth = page.getMediaBox().getWidth();
-                float y = 780f;
-
-                // 1) LOGO VENDEUR (HAUT DROITE)
-                try {
-                    String sellerTaxId = (inv.getSeller() != null) ? inv.getSeller().getTaxId() : null;
-                    if (sellerTaxId != null && !sellerTaxId.isBlank()) {
-                        byte[] logoBytes = sellerProfileService.getLogoBytes(sellerTaxId);
-                        if (logoBytes != null && logoBytes.length > 0) {
-                            PDImageXObject logo = PDImageXObject.createFromByteArray(doc, logoBytes, "seller-logo");
-                            c.drawImage(logo, pageWidth - 130f, y - 50f, 90f, 60f);
-                        }
-                    }
-                } catch (Exception e) {
-                    log.warn("Impossible de charger le logo vendeur pour le document {} : {}", id, e.getMessage());
-                }
-
-                // 2) TITRE (Point 1 & 2)
-                c.beginText();
-                c.setFont(PDType1Font.HELVETICA_BOLD, 16);
-                c.newLineAtOffset(50, y);
-                c.showText(documentTitle); // Visuel FNE/RNE
-                c.endText();
-                y -= 30;
-
-                // 3) BLOC VENDEUR (Point 4)
-                var s = inv.getSeller();
-                c.beginText();
-                c.setFont(PDType1Font.HELVETICA_BOLD, 12);
-                c.newLineAtOffset(50, y);
-                c.showText("VENDEUR");
-                c.endText();
-                y -= 15;
-
-                c.beginText();
-                c.setFont(PDType1Font.HELVETICA, 10);
-                c.newLineAtOffset(50, y);
-                c.showText(nvl(s != null ? s.getCompanyName() : null));
-                if (isRne) { // Ajout du Terminal pour le RNE
-                    c.newLineAtOffset(0, -12);
-                    c.showText("TERMINAL : " + nvl(inv.getSeller() != null ? inv.getSeller().getPointOfSaleName() : null));
-                }
-                c.newLineAtOffset(0, -12);
-                c.showText("NCC : " + nvl(s != null ? s.getTaxId() : null));
-                c.endText();
-                y -= 60;
-
-                // 4) BLOC ACHETEUR (Point 5)
-                var b = inv.getBuyer();
-                c.beginText();
-                c.setFont(PDType1Font.HELVETICA_BOLD, 12);
-                c.newLineAtOffset(50, y);
-                c.showText("ACHETEUR");
-                c.endText();
-                y -= 15;
-
-                c.beginText();
-                c.setFont(PDType1Font.HELVETICA, 10);
-                c.newLineAtOffset(50, y);
-                c.showText(nvl(b != null ? b.getName() : null));
-                c.endText();
-                y -= 40;
-
-                // 5) INFOS DOCUMENT (Point 2)
-                c.beginText();
-                c.setFont(PDType1Font.HELVETICA_BOLD, 10);
-                c.newLineAtOffset(50, y);
-                c.showText(labelNumero + nvl(inv.getInvoiceNumber())); // Numéro format spécial
-                c.newLineAtOffset(0, -12);
-                c.setFont(PDType1Font.HELVETICA, 10);
-                c.showText("Date émission : " + (inv.getIssueDate() != null ? inv.getIssueDate().toString() : "—"));
-                c.endText();
-                y -= 40;
-
-                // 6) TABLEAU PRODUITS
-                c.beginText();
-                c.setFont(PDType1Font.HELVETICA_BOLD, 10);
-                c.newLineAtOffset(50, y);
-                c.showText("Désignation | Qté | P.U HT | TVA | Total TTC");
-                c.endText();
-                y -= 15;
-
-                if (inv.getLines() != null) {
-                    c.setFont(PDType1Font.HELVETICA, 10);
-                    for (InvoiceResponse.InvoiceLineDTO line : inv.getLines()) {
-                        c.beginText();
-                        c.newLineAtOffset(50, y);
-                        c.showText(nvl(line.getDescription()) + " | " + nbd(line.getQuantity()) + " | " + nbd(line.getUnitPrice()) + " | " + nbd(line.getVatAmount()) + " | " + nbd(line.getLineTotal()));
-                        c.endText();
-                        y -= 15;
-                    }
-                }
-                y -= 20;
-
-                // 7) TOTAUX & MODE DE PAIEMENT (Point 6 & 7)
-                var t = inv.getTotals();
-                BigDecimal subtotal = t != null ? safe(t.getSubtotal()) : BigDecimal.ZERO;
-                BigDecimal vat = t != null ? safe(t.getTotalVat()) : BigDecimal.ZERO;
-                BigDecimal other = t != null ? safe(t.getOtherTaxes()) : BigDecimal.ZERO;
-                BigDecimal total = t != null ? safe(t.getTotalToPay()) : subtotal.add(vat).add(other);
-
-                c.beginText();
-                c.setFont(PDType1Font.HELVETICA_BOLD, 10);
-                c.newLineAtOffset(50, y);
-                c.showText("RÉSUMÉ DES MONTANTS");
-                c.endText();
-                y -= 15;
-
-                c.beginText();
-                c.setFont(PDType1Font.HELVETICA, 10);
-                c.newLineAtOffset(50, y);
-                c.showText("Sous-total HT : " + nbd(subtotal));
-                c.newLineAtOffset(0, -12);
-                c.showText("TVA : " + nbd(vat));
-                if (other.compareTo(BigDecimal.ZERO) > 0) {
-                    c.newLineAtOffset(0, -12);
-                    c.showText("TIMBRE DE QUITTANCE : " + nbd(other)); // Point 6
-                }
-                c.newLineAtOffset(0, -15);
-                c.setFont(PDType1Font.HELVETICA_BOLD, 11);
-                c.showText("TOTAL À PAYER TTC : " + nbd(total) + " CFA"); // Point 6
-                c.newLineAtOffset(0, -15);
-                c.showText("MODE DE PAIEMENT : " + (inv.getPaymentMode() != null ? inv.getPaymentMode() : "Espèces")); // Point 7
-                c.endText();
-
-                // 8) QR CODE DE CERTIFICATION (Point 3)
-                if (inv.getQrBase64() != null && !inv.getQrBase64().isBlank()) {
-                    try {
-                        byte[] qrBytes = Base64.getDecoder().decode(inv.getQrBase64());
-                        PDImageXObject qr = PDImageXObject.createFromByteArray(doc, qrBytes, "qr");
-                        c.drawImage(qr, (pageWidth - 110) / 2, 80f, 110f, 110f); // Centrage
-                    } catch (Exception e) {
-                        log.warn("QR invalide : {}", e.getMessage());
-                    }
-                }
-            } // Fin du try-with-resources ContentStream
-
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            doc.save(baos);
-            return baos.toByteArray();
+        // 2. Mapper vers InvoiceResponse
+        InvoiceResponse response = invoiceMapper.toResponse(entity);
+        response.setLines(invoiceMapper.toLineResponseList(entity.getLines()));
+        response.setTotals(computeTotalsResponse(response));
+        
+        // 3. Si pas certifié FNE, ajouter une référence "BROUILLON"
+        if (response.getFneReference() == null || response.getFneReference().isEmpty()) {
+            response.setFneReference("BROUILLON-" + entity.getInvoiceNumber());
         }
+        
+        // 4. Générer le PDF
+        return htmlPdfService.generatePdf(response);
     }
 
-    private static String nvl(String s) {
-    return (s == null || s.isBlank()) ? "—" : s;
-    }
-
-    private static String nbd(BigDecimal b) {
-        return b == null ? "0" : b.stripTrailingZeros().toPlainString();
-    }
-
-
-
+    // ============================================================
+    // GENERATE MOCK PDF (preview sans certification)
+    // ============================================================
     @Transactional(readOnly = true)
-    public byte[] generateMockPdf(Long id) throws Exception {
-        return generateFnePdf(id);
+    public byte[] generateMockPdf(Long id) {
+        InvoiceEntity entity = invoiceRepository.findById(id)
+            .orElseThrow(() -> new InvoiceNotFoundException(id));
+        
+        InvoiceResponse response = invoiceMapper.toResponse(entity);
+        response.setLines(invoiceMapper.toLineResponseList(entity.getLines()));
+        response.setTotals(computeTotalsResponse(response));
+        
+        return htmlPdfService.generatePdf(response);
+    }
+
+    // ============================================================
+    // GET ENTITY BY ID (pour usage interne)
+    // ============================================================
+    @Transactional(readOnly = true)
+    public InvoiceEntity getInvoiceEntityById(Long id) {
+        return invoiceRepository.findById(id)
+            .orElseThrow(() -> new InvoiceNotFoundException(id));
+    }
+
+    // ============================================================
+    // REFUND
+    // ============================================================
+    @Transactional
+    public InvoiceResponse refundInvoice(Long id, com.oxalio.invoice.dto.RefundRequest refundRequest) {
+        InvoiceEntity original = invoiceRepository.findById(id)
+                .orElseThrow(() -> new InvoiceNotFoundException(id));
+
+        log.info("Traitement de l'avoir pour la facture : {} pour la raison : {}", 
+                original.getInvoiceNumber(), refundRequest.getReason());
+
+        original.setStatus(InvoiceStatus.CANCELLED);
+        
+        InvoiceEntity saved = invoiceRepository.save(original);
+        return invoiceMapper.toResponse(saved);
     }
 
     // ============================================================
@@ -477,20 +350,5 @@ public class InvoiceService {
                 + " | Amount:" + e.getTotalToPay()
                 + " " + e.getCurrency()
                 + " | Date:" + e.getIssueDate();
-    }
-
-    @Transactional
-    public InvoiceResponse refundInvoice(Long id, com.oxalio.invoice.dto.RefundRequest refundRequest) {
-        InvoiceEntity original = invoiceRepository.findById(id)
-                .orElseThrow(() -> new InvoiceNotFoundException(id));
-
-        log.info("Traitement de l'avoir pour la facture : {} pour la raison : {}", 
-                original.getInvoiceNumber(), refundRequest.getReason());
-
-        // Logique simplifiée pour la DGI : On passe le statut en REFUNDED
-        original.setStatus(InvoiceStatus.CANCELLED); 
-        
-        InvoiceEntity saved = invoiceRepository.save(original);
-        return invoiceMapper.toResponse(saved);
     }
 }

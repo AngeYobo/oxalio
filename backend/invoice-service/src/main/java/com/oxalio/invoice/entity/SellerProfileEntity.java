@@ -1,5 +1,4 @@
 // src/main/java/com/oxalio/invoice/entity/SellerProfileEntity.java
-// src/main/java/com/oxalio/invoice/entity/SellerProfileEntity.java
 package com.oxalio.invoice.entity;
 
 import jakarta.persistence.*;
