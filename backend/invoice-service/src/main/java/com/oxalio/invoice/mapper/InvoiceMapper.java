@@ -116,7 +116,7 @@ public interface InvoiceMapper {
     @Mapping(target = "sellerCompanyName", source = "seller.companyName")
     @Mapping(target = "sellerTaxId", source = "seller.taxId")
     @Mapping(target = "sellerAddress", source = "seller.address")
-    @Mapping(target = "sellerDisplayName", source = "seller.sellerDisplayName")
+    @Mapping(target = "sellerDisplayName", source = "seller.companyName")
     @Mapping(target = "pointOfSaleName", source = "seller.pointOfSaleName")
     
     @Mapping(target = "buyerName", source = "buyer.name")
@@ -177,7 +177,7 @@ public interface InvoiceMapper {
     @Mapping(target = "sellerCompanyName", source = "seller.companyName")
     @Mapping(target = "sellerTaxId", source = "seller.taxId")
     @Mapping(target = "sellerAddress", source = "seller.address")
-    @Mapping(target = "sellerDisplayName", source = "seller.sellerDisplayName")
+    @Mapping(target = "sellerDisplayName", source = "seller.companyName")
     @Mapping(target = "pointOfSaleName", source = "seller.pointOfSaleName")
     
     @Mapping(target = "buyerName", source = "buyer.name")

@@ -78,12 +78,24 @@ public class DgiClientMock {
 
     /**
      * Simule la certification d'une facture avec l'entité complète.
+     * Cette méthode est appelée par InvoiceService.submitToDgi()
      * 
      * @param invoice L'entité facture à certifier
      * @return Certification mock de la DGI
      */
     public DgiCertification simulateCertification(InvoiceEntity invoice) {
-        log.info("🔐 [MOCK] Simulation de certification pour la facture {}", invoice.getInvoiceNumber());
+        log.info("🔐 [MOCK] Certification de la facture {} auprès de la DGI", invoice.getInvoiceNumber());
+        return certifyInvoice(invoice.getInvoiceNumber());
+    }
+
+    /**
+     * Simule la signature d'une facture (alias pour simulateCertification).
+     * 
+     * @param invoice L'entité facture à signer
+     * @return Certification mock de la DGI
+     */
+    public DgiCertification signInvoice(InvoiceEntity invoice) {
+        log.info("✍️ [MOCK] Signature de la facture: {}", invoice.getInvoiceNumber());
         return certifyInvoice(invoice.getInvoiceNumber());
     }
 

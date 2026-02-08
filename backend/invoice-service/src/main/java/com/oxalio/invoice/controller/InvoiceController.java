@@ -122,6 +122,10 @@ public class InvoiceController {
         InvoiceResponse resp = invoiceService.submitToDgi(id);
         return ResponseEntity.ok(resp);
     }
+
+    // ============================================================
+    // REFUND (AVOIR)
+    // ============================================================
     @PostMapping("/{id}/refund")
     @Operation(summary = "Générer un avoir (Refund) pour une facture")
     public ResponseEntity<InvoiceResponse> refundInvoice(
@@ -132,27 +136,20 @@ public class InvoiceController {
         InvoiceResponse response = invoiceService.refundInvoice(id, refundRequest);
         return ResponseEntity.ok(response);
     }
+
     // ============================================================
-    // PDF MOCK
+    // PDF FACTURE (Format RNE/FNE)
     // ============================================================
     @GetMapping("/{id}/pdf")
-    @Operation(summary = "Télécharger un PDF mock de facture")
-    public ResponseEntity<byte[]> downloadInvoicePdf(@PathVariable Long id) {
-        try {
-            byte[] pdf = invoiceService.generateFnePdf(id);
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_PDF);
-            headers.setContentDispositionFormData(
-                    "attachment",
-                    "invoice-" + id + ".pdf"
-            );
-
-            return new ResponseEntity<>(pdf, headers, HttpStatus.OK);
-
-        } catch (Exception e) {
-            log.error("Erreur génération PDF invoice={}", id, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+    public ResponseEntity<byte[]> downloadPdf(@PathVariable Long id) {
+        byte[] pdf = invoiceService.generateFnePdf(id);
+        
+        return ResponseEntity.ok()
+            .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PDF_VALUE)
+            .header(HttpHeaders.CONTENT_DISPOSITION, 
+                    "attachment; filename=\"facture-fne-" + id + ".pdf\"")
+            .body(pdf);
     }
+
+    
 }

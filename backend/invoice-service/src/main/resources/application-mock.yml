@@ -37,8 +37,15 @@ spring:
       - classpath:db/migration/common
 
 oxalio:
+  # Régime fiscal par défaut
+  default-regime: TEE
+  
+  # Centre des impôts par défaut
+  default-tax-center: 838 Impôts de Bouake i
+  
   invoice:
     logo-base-dir: ./seller-logos
+    seller-logos-path: seller-logos/
 
 springdoc:
   api-docs:

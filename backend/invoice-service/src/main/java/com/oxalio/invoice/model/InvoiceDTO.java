@@ -1,5 +1,8 @@
 package com.oxalio.invoice.model;
 
+import com.oxalio.invoice.dto.SellerDTO;
+import com.oxalio.invoice.dto.BuyerDTO;
+
 import java.time.LocalDateTime;
 import java.util.List;
 

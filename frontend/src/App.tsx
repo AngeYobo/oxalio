@@ -13,6 +13,7 @@ import AdminQuickLogin from './pages/AdminQuickLogin';
 import ProtectedRoute from "./components/ProtectedRoute";
 import InvoiceList from "./components/InvoiceList";
 import CreateInvoice from "./components/CreateInvoice";
+import CreateInvoicePage from './pages/CreateInvoicePage';
 
 // ========================================
 // Pages - Authentification
@@ -75,6 +76,7 @@ export default function App() {
           <Route path="invoices" element={<Invoices />} />
           <Route path="invoices/create" element={<CreateInvoice />} />
           <Route path="invoices/:id" element={<InvoiceDetail />} />
+          <Route path="invoices/create-test" element={<CreateInvoicePage />} />
           
           {/* Autres pages */}
           <Route path="fne-demo" element={<FneDemo />} />

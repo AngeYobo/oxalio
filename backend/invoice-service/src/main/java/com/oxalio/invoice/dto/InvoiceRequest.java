@@ -1,7 +1,7 @@
 package com.oxalio.invoice.dto;
 
-import com.oxalio.invoice.model.SellerDTO;
-import com.oxalio.invoice.model.BuyerDTO;
+import com.oxalio.invoice.dto.SellerDTO;
+import com.oxalio.invoice.dto.BuyerDTO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
@@ -21,7 +21,7 @@ public class InvoiceRequest {
     private String invoiceNumber;
 
     @NotBlank(message = "Le type de facture est obligatoire")
-    @Pattern(regexp = "STANDARD|PROFORMA|CREDIT_NOTE", message = "Type de facture invalide")
+    @Pattern(regexp = "STANDARD|PROFORMA|CREDIT_NOTE|purchase", message = "Type de facture invalide")
     private String invoiceType;
 
     @NotBlank(message = "La devise est obligatoire")
@@ -45,7 +45,7 @@ public class InvoiceRequest {
     private TotalsDTO totals;
 
     @NotBlank(message = "Le mode de paiement est obligatoire")
-    @Pattern(regexp = "CASH|TRANSFER|CARD|MOBILE", message = "Mode de paiement invalide")
+    @Pattern(regexp = "CASH|TRANSFER|CARD|MOBILE_MONEY|CHECK|DEFERRED", message = "Mode de paiement invalide")
     private String paymentMode;
 
     @Size(max = 500, message = "Les notes ne peuvent excéder 500 caractères")
@@ -135,7 +135,7 @@ public class InvoiceRequest {
     }
 
     @NotBlank(message = "Le template est obligatoire (B2B ou B2C)")
-    @Pattern(regexp = "B2B|B2C", message = "Le template doit être B2B (Facture) ou B2C (Reçu)")
+    @Pattern(regexp = "B2B|B2C|purchase", message = "Le template doit être B2B (Facture) ou B2C (Reçu)")
     private String template; //
 
     private Boolean isRne;   // Pour la traçabilité DGI
