@@ -1,0 +1,5 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/oxalio_sandbox
+    username: oxalio
+    password: oxalio
