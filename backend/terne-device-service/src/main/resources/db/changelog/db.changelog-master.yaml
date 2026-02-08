@@ -1,0 +1,20 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-terne-core
+      author: oxalio
+      changes:
+        - sqlFile:
+            path: db/changelog/001_terne_core.sql
+            relativeToChangelogFile: false
+            splitStatements: false
+            stripComments: true
+
+  - changeSet:
+      id: 002-soft-delete-and-correlation
+      author: oxalio
+      changes:
+        - sqlFile:
+            path: db/changelog/002_soft_delete_and_correlation.postgresql.sql
+            relativeToChangelogFile: false
+            splitStatements: false
+            stripComments: true

@@ -1,0 +1,53 @@
+server:
+  port: 8086
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: always
+
+spring:
+  application:
+    name: terne-device-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5433/oxalio
+    username: oxalio
+    password: oxalio
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+  liquibase:
+    enabled: true
+    change-log: classpath:/db/changelog/db.changelog-master.yaml
+
+  mvc:
+    log-request-details: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,mappings,httpexchanges,loggers
+
+logging:
+  level:
+    root: INFO
+    com.oxalio: DEBUG
+
+    org.springframework.web: DEBUG
+    org.springframework.web.servlet.DispatcherServlet: DEBUG
+    org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver: DEBUG
+
+    org.springframework.http.converter.json: DEBUG
+    org.springframework.validation: DEBUG
+
+    org.springframework.security: DEBUG
+    org.springframework.security.web.FilterChainProxy: DEBUG
+
+    org.hibernate.SQL: INFO
