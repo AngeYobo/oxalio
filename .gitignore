@@ -78,3 +78,6 @@ rne.pdf
 test.pdf
 test-avec-logo.pdf
 test-fne-avec-logo.pdfbackend/invoice-service/backup/
+
+# Invoice-service local backups (do not commit)
+backend/invoice-service/backup/
