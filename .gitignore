@@ -59,3 +59,22 @@ docs/API-1-FNE-VENTE.md
 
 # Postman local
 postman/
+
+# --- Local scratch (do not commit) ---
+command.json
+terminal.json
+terminal.http
+docterne.java
+
+# --- Local notes/docs (do not commit) ---
+dgi_test.md
+fen.md
+project-structure.md
+docs/CAHIER_DES_CHARGES_FNE.md
+docs/build_certif_pubilsh.md
+
+# --- PDFs (local tests) ---
+rne.pdf
+test.pdf
+test-avec-logo.pdf
+test-fne-avec-logo.pdf
