@@ -88,5 +88,5 @@ test-fne-avec-logo.pdf
 # Local test PDFs (do not commit)
 test-fne-avec-logo.pdf
 
-# Local test PDFs
-*.pdf
+# # Local test PDFs
+# *.pdf
